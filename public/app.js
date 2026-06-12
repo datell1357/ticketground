@@ -246,7 +246,7 @@ function renderStats() {
 function renderEventCatalog() {
   const events = categoryEvents[appState.activeCategory] || categoryEvents.concert;
   $("#eventCatalog").innerHTML = events.map((item, index) => `
-    <div class="event-card">
+    <div class="event-card" data-route="${item.route}" tabindex="0" role="link" aria-label="${item.title} 예매하기">
       <img src="${item.image}" alt="${item.title} 포스터" />
       <div class="event-info">
         <span class="badge">${item.badge}</span>
@@ -274,7 +274,7 @@ function renderDiscoverySections() {
       </div>
       <div class="discovery-grid">
         ${section.items.map((item) => `
-          <article class="discovery-card">
+          <article class="discovery-card" data-route="booking" tabindex="0" role="link" aria-label="${item.title} 예매하기">
             <img src="${image}" alt="${item.title}" />
             <div class="card-tags">${item.tags.map((tag) => `<em>${tag}</em>`).join("")}</div>
             <strong>${item.title}</strong>
@@ -362,7 +362,7 @@ function renderSearchResults() {
   container.hidden = false;
   $("#searchResultCopy").textContent = `"${queryText}" 검색 조건에 맞는 판매 공연입니다. 좌석은 예매 단계에서 선택합니다.`;
   $("#saleTicketResults").innerHTML = events.map((item, index) => `
-    <div class="event-card">
+    <div class="event-card" data-route="booking" tabindex="0" role="link" aria-label="${item.title} 예매하기">
       <img src="${item.image}" alt="${item.title} 포스터" />
       <div class="event-info">
         <span class="badge">${item.badge}</span>
@@ -663,6 +663,14 @@ $("#searchInput").addEventListener("keydown", (event) => {
     setRoute("concerts");
     $("#searchResults").scrollIntoView({ behavior: "smooth", block: "start" });
   }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  const routeTarget = event.target.closest?.("[data-route]");
+  if (!routeTarget) return;
+  event.preventDefault();
+  setRoute(routeTarget.dataset.route);
 });
 
 $("#profileEditForm").addEventListener("submit", (event) => {
