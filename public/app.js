@@ -28,6 +28,24 @@ const categoryEvents = {
       cta: "티켓 보기"
     }
   ],
+  festival: [
+    {
+      title: "Tig Summer Beat Festival",
+      meta: "2026.07.25 토요일 오후 2시 · 난지한강공원",
+      badge: "페스티벌 · 1일권/양일권",
+      image: "/assets/neon-stage-hero.png",
+      route: "booking",
+      cta: "판매 티켓 보기"
+    },
+    {
+      title: "City Lights Music Camp",
+      meta: "2026.09.05 토요일 오후 1시 · 인천 파라다이스 시티",
+      badge: "페스티벌 · 공식 판매",
+      image: "/assets/neon-stage-hero.png",
+      route: "booking",
+      cta: "판매 티켓 보기"
+    }
+  ],
   sports: [
     {
       title: "Seoul Tigers vs Busan Waves",
