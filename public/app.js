@@ -3,6 +3,7 @@ const appState = {
   activeZone: "all",
   activeCategory: "concert",
   query: "",
+  searchActive: false,
   qr: null,
   route: "concerts",
   nicknameOverride: ""
@@ -250,6 +251,76 @@ function renderTickets() {
   }).join("") || `<p>조건에 맞는 좌석이 없습니다.</p>`;
 }
 
+function ticketCard(ticket, options = {}) {
+  const available = ticket.status === "ON_SALE";
+  const zone = zoneById(ticket.zoneId);
+  return `
+    <article class="seat-card">
+      <div class="seat-top">
+        <div>
+          <div class="seat-name">${ticket.seatLabel}</div>
+          <p>${zone.name} · ${currentEvent().venue}</p>
+        </div>
+        <span class="seat-status ${available ? "" : "closed"}">${statusLabel(ticket)}</span>
+      </div>
+      <div class="seat-meta">
+        <span>공연 ${currentEvent().title}</span>
+        <span>가격 ${fmt.format(ticket.faceValue)}원</span>
+        <span>재판매 허용 ${fmt.format(ticket.minPrice)}원 ~ ${fmt.format(ticket.maxPrice)}원</span>
+      </div>
+      <button ${available ? "" : "disabled"} data-buy="${ticket.id}">
+        ${available ? options.buyLabel || "예매하기" : "예매 불가"}
+      </button>
+    </article>
+  `;
+}
+
+function renderSearchResults() {
+  const container = $("#searchResults");
+  if (!appState.searchActive) {
+    container.hidden = true;
+    return;
+  }
+
+  const tickets = filteredTickets().filter((ticket) => ticket.status === "ON_SALE");
+  const queryText = appState.query.trim() || "전체";
+  container.hidden = false;
+  $("#searchResultCopy").textContent = `"${queryText}" 검색 조건에 맞는 판매 티켓입니다.`;
+  $("#saleTicketResults").innerHTML = tickets.length
+    ? tickets.map((ticket) => ticketCard(ticket, { buyLabel: "바로 예매" })).join("")
+    : `<p>검색 조건에 맞는 판매 티켓이 없습니다.</p>`;
+
+  const openPools = appState.data.resalePools.filter((pool) => pool.status === "OPEN");
+  $("#resalePreviewList").innerHTML = openPools.length ? openPools.map((pool) => {
+    const zone = zoneById(pool.zoneId);
+    return `
+      <article class="resale-card">
+        <div class="resale-top">
+          <div>
+            <strong>${zone.name} 공식 재판매</strong>
+            <p>${fmt.format(pool.price)}원 · 대기자 ${pool.buyers.length}명</p>
+          </div>
+          <span class="seat-status">OPEN</span>
+        </div>
+        <div class="resale-actions">
+          <button data-join="${pool.id}">대기 신청</button>
+          <button class="secondary" data-draw="${pool.id}">매칭 진행</button>
+        </div>
+      </article>
+    `;
+  }).join("") : `
+    <article class="resale-card">
+      <div class="resale-top">
+        <div>
+          <strong>현재 열린 공식 재판매 풀이 없습니다.</strong>
+          <p>My 예매내역에서 보유 티켓을 공식 재판매로 등록하면 이곳에 표시됩니다.</p>
+        </div>
+      </div>
+      <a class="plain-link" href="#my" data-route="my">내 티켓 판매하기</a>
+    </article>
+  `;
+}
+
 function renderPools() {
   const openPools = appState.data.resalePools.filter((pool) => pool.status === "OPEN");
   $("#poolList").innerHTML = openPools.length ? openPools.map((pool) => {
@@ -316,6 +387,7 @@ async function refresh() {
   renderZoneTabs();
   renderTickets();
   renderPools();
+  renderSearchResults();
   renderSellForm();
   renderMyTickets();
   setRoute(window.location.hash.replace("#", "") || appState.route, false);
@@ -408,6 +480,7 @@ document.addEventListener("click", async (event) => {
       appState.activeZone = target.dataset.zone;
       renderZoneTabs();
       renderTickets();
+      renderSearchResults();
     }
     if (target.dataset.filter) {
       document.querySelectorAll(".chip").forEach((chip) => chip.classList.remove("active"));
@@ -416,7 +489,10 @@ document.addEventListener("click", async (event) => {
       appState.activeZone = label === "all" ? "all" : currentEvent().zones.find((zone) => zone.name === label)?.id || "all";
       renderZoneTabs();
       renderTickets();
-      setRoute("booking");
+      appState.searchActive = true;
+      renderSearchResults();
+      setRoute("concerts");
+      $("#searchResults").scrollIntoView({ behavior: "smooth", block: "start" });
     }
     const categoryButton = target.closest("[data-category]");
     if (categoryButton) {
@@ -456,14 +532,20 @@ $("#sellBtn").addEventListener("click", () => listForResale().catch((error) => t
 $("#verifyQrBtn").addEventListener("click", () => verifyQr().catch((error) => toast(error.message)));
 $("#searchBtn").addEventListener("click", () => {
   appState.query = $("#searchInput").value;
+  appState.searchActive = true;
   renderTickets();
-  setRoute("booking");
+  renderSearchResults();
+  setRoute("concerts");
+  $("#searchResults").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("#searchInput").addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     appState.query = event.target.value;
+    appState.searchActive = true;
     renderTickets();
-    setRoute("booking");
+    renderSearchResults();
+    setRoute("concerts");
+    $("#searchResults").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 });
 
