@@ -143,6 +143,28 @@ function formatDateCompact(value) {
   });
 }
 
+function formatDatePeriod(value) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  return `${year}.${month}.${day}.(${weekday})`;
+}
+
+function eventPeriod(event) {
+  const dates = event.dates?.length
+    ? [...event.dates].sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))
+    : [{ startsAt: event.date }];
+  const firstDate = dates[0];
+  const lastDate = dates.at(-1);
+  if (!firstDate?.startsAt) return "";
+  if (lastDate?.startsAt && firstDate.startsAt !== lastDate.startsAt) {
+    return `${formatDatePeriod(firstDate.startsAt)} ~ ${formatDatePeriod(lastDate.startsAt)}`;
+  }
+  return formatDatePeriod(firstDate.startsAt);
+}
+
 function toast(message) {
   const node = $("#toast");
   node.textContent = message;
@@ -209,11 +231,7 @@ function statusLabel(ticket) {
 }
 
 function eventMeta(event) {
-  const firstDate = event.dates?.[0];
-  const lastDate = event.dates?.at(-1);
-  const dateCopy = firstDate && lastDate && firstDate.id !== lastDate.id
-    ? `${formatDateCompact(firstDate.startsAt)} - ${formatDateCompact(lastDate.startsAt)}`
-    : formatDateTime(firstDate?.startsAt || event.date);
+  const dateCopy = eventPeriod(event);
   return `${dateCopy} · ${event.venue}`;
 }
 
@@ -676,9 +694,7 @@ function renderProductSummary() {
   summary.querySelector(".rating-line strong").textContent = event.rating || "4.8";
   const facts = summary.querySelectorAll(".product-facts div");
   facts[0].querySelector("strong").textContent = venue.name;
-  facts[1].querySelector("strong").textContent = event.dates?.length > 1
-    ? `${formatDateCompact(event.dates[0].startsAt)} 외 ${event.dates.length - 1}회`
-    : formatDateCompact(event.dates?.[0]?.startsAt || event.date);
+  facts[1].querySelector("strong").textContent = eventPeriod(event);
   facts[2].querySelector("strong").textContent = `${event.durationMinutes || 120}분`;
   facts[3].querySelector("strong").textContent = event.ageLimit || "8세 이상";
   $("#productPlace p").textContent = `${venue.name} · ${venue.address || event.venue}`;
