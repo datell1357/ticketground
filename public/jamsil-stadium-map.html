@@ -3,897 +3,356 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>잠실 올림픽 주 경기장 구역/좌석 선택</title>
+    <title>Ticketground 좌석 선택</title>
     <style>
-      :root {
-        --bg: #f4f7fb;
-        --ink: #171717;
-        --sub: #647082;
-        --line: #d9dee8;
-        --vip: #ffd400;
-        --r: #7ee35f;
-        --s: #9be2ff;
-        --field: #1f9d5c;
-        --selected: #111827;
-        --sold: #cfd5df;
-        --focus: #00aaff;
-      }
-
       * { box-sizing: border-box; }
-
+      html, body { margin: 0; padding: 0; height: 100%; }
       body {
-        margin: 0;
-        min-height: 100vh;
-        color: var(--ink);
-        background:
-          radial-gradient(circle at 18% 0%, rgba(255, 212, 0, 0.28), transparent 28%),
-          radial-gradient(circle at 90% 12%, rgba(0, 170, 255, 0.16), transparent 30%),
-          linear-gradient(180deg, #ffffff, var(--bg));
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-
-      button,
-      input,
-      select { font: inherit; }
-
-      main {
-        width: min(1480px, calc(100% - 32px));
-        margin: 0 auto;
-        padding: 32px 0 48px;
-      }
-
-      .page-head {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 16px;
-        align-items: end;
-        margin-bottom: 18px;
-      }
-
-      .eyebrow {
-        display: inline-flex;
-        width: fit-content;
-        margin-bottom: 10px;
-        padding: 6px 10px;
-        border-radius: 999px;
-        background: var(--vip);
-        font-size: 12px;
-        font-weight: 950;
-      }
-
-      h1, h2, h3, p { margin: 0; }
-
-      h1 {
-        font-size: clamp(28px, 4vw, 48px);
-        letter-spacing: -0.05em;
-      }
-
-      .page-head p {
-        margin-top: 8px;
-        color: var(--sub);
-        font-weight: 750;
-      }
-
-      .source-link {
-        color: #171717;
-        font-size: 13px;
-        font-weight: 900;
-      }
-
-      .layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 390px;
-        gap: 18px;
-        align-items: start;
-      }
-
-      .map-card,
-      .side-card,
-      .detail-card {
-        border: 1px solid var(--line);
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.94);
-        box-shadow: 0 24px 60px rgba(31, 41, 55, 0.13);
-      }
-
-      .toolbar {
-        display: grid;
-        grid-template-columns: minmax(210px, 1fr) 180px auto;
-        gap: 10px;
-        padding: 14px;
-        border-bottom: 1px solid var(--line);
-        background: #fffaf0;
-        border-radius: 24px 24px 0 0;
-      }
-
-      .control { display: grid; gap: 5px; }
-
-      .control span {
-        color: var(--sub);
-        font-size: 12px;
-        font-weight: 900;
-      }
-
-      input,
-      select {
-        min-height: 42px;
-        width: 100%;
-        padding: 0 12px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: #fff;
-        color: var(--ink);
-        font-weight: 850;
-      }
-
-      .zoom-controls {
-        display: flex;
-        gap: 6px;
-        align-items: end;
-      }
-
-      .zoom-controls button,
-      .reserve-button,
-      .ghost-button {
-        min-height: 42px;
-        padding: 0 13px;
-        border: 0;
-        border-radius: 12px;
-        background: var(--ink);
-        color: #fff;
-        font-weight: 950;
-        cursor: pointer;
-      }
-
-      .ghost-button {
-        border: 1px solid var(--line);
-        background: #fff;
-        color: var(--ink);
-      }
-
-      .map-stage {
-        position: relative;
+        background: #050507;
+        color: #f1f3f5;
+        font-family: "Helvetica Neue", Helvetica, ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        -webkit-font-smoothing: antialiased;
         overflow: hidden;
-        padding: 18px;
       }
-
-      .stadium-viewport {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 16 / 10;
-        min-height: 620px;
-        overflow: hidden;
-        border: 1px solid rgba(23, 23, 23, 0.08);
-        border-radius: 22px;
-        background:
-          radial-gradient(circle at 50% 50%, rgba(255, 212, 0, 0.18), transparent 24%),
-          linear-gradient(180deg, #f8fbff, #fffdf3);
-      }
-
-      .stadium-scale {
-        position: absolute;
-        inset: 0;
-        transform: scale(var(--zoom, 1));
-        transform-origin: center;
-        transition: transform 180ms ease;
-      }
-
-      .blueprint,
-      .section-layer,
-      .label-layer {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-      }
-
-      .section-button {
-        position: absolute;
-        left: calc(var(--x) * 1%);
-        top: calc(var(--y) * 1%);
-        z-index: 3;
-        display: grid;
-        place-items: center;
-        width: var(--w, 44px);
-        min-width: var(--w, 44px);
-        height: var(--h, 32px);
-        min-height: var(--h, 32px);
-        padding: 0;
-        border: 1px solid rgba(17, 24, 39, 0.42);
-        border-radius: 10px;
-        color: #111827;
-        background: var(--section-color);
-        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.18);
-        transform: translate(-50%, -50%) rotate(var(--rotate, 0deg));
-        cursor: pointer;
-        font-size: 15px;
-        font-weight: 950;
-        transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease, filter 140ms ease;
-      }
-
-      .section-button small {
-        display: block;
-        color: rgba(17, 24, 39, 0.7);
-        font-size: 8px;
-        line-height: 1;
-        letter-spacing: -0.02em;
-      }
-
-      .section-button:hover,
-      .section-button:focus-visible {
-        z-index: 8;
-        outline: 0;
-        transform: translate(-50%, -50%) rotate(var(--rotate, 0deg)) scale(1.14);
-        box-shadow: 0 0 0 4px rgba(0, 170, 255, 0.22), 0 10px 22px rgba(15, 23, 42, 0.24);
-      }
-
-      .section-button.active {
-        z-index: 9;
-        border-color: #fff;
-        color: #fff;
-        background: var(--selected);
-        box-shadow: 0 0 0 5px rgba(255, 212, 0, 0.62), 0 14px 30px rgba(15, 23, 42, 0.32);
-      }
-
-      .section-button.dimmed { opacity: 0.18; filter: grayscale(0.5); }
-
-      .section-label {
-        position: absolute;
-        left: calc(var(--x) * 1%);
-        top: calc(var(--y) * 1%);
-        z-index: 2;
-        padding: 4px 8px;
-        border-radius: 999px;
-        color: #111827;
-        background: rgba(255, 255, 255, 0.82);
-        font-size: 11px;
-        font-weight: 950;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-      }
-
-      .map-hint {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
-        color: var(--sub);
-        font-size: 12px;
-        font-weight: 850;
-      }
-
-      .legend {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-        gap: 8px;
-        margin-top: 14px;
-      }
-
-      .legend span {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        padding: 8px 10px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: #fff;
-        font-size: 12px;
-        font-weight: 900;
-      }
-
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--dot);
-      }
-
-      .side-card {
-        display: grid;
-        gap: 14px;
-        padding: 18px;
-        position: sticky;
-        top: 18px;
-      }
-
-      .status-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-      }
-
-      .status-box {
-        display: grid;
-        gap: 2px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: #fff;
-      }
-
-      .status-box span {
-        color: var(--sub);
-        font-size: 12px;
-        font-weight: 900;
-      }
-
-      .status-box strong { font-size: 20px; }
-
-      .selected-card,
-      .section-card {
-        display: grid;
-        gap: 10px;
-        padding: 14px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, #fff8d8, #ffffff);
-        border: 1px solid #f1df8b;
-      }
-
-      .selected-card dl,
-      .section-card dl {
-        display: grid;
-        gap: 8px;
-        margin: 0;
-      }
-
-      .selected-card div,
-      .section-card div {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-      }
-
-      dt { color: var(--sub); font-weight: 850; }
-      dd { margin: 0; font-weight: 950; text-align: right; }
-
-      .detail-card {
-        display: grid;
-        gap: 14px;
-        padding: 16px;
-      }
-
-      .detail-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: start;
-      }
-
-      .detail-head p {
-        margin-top: 4px;
-        color: var(--sub);
-        font-size: 13px;
-        font-weight: 800;
-      }
-
-      .seat-grid {
-        display: grid;
-        gap: 9px;
-        max-height: 430px;
-        overflow: auto;
-        padding-right: 4px;
-      }
-
-      .seat-row {
-        display: grid;
-        grid-template-columns: 28px minmax(0, 1fr);
-        gap: 8px;
-        align-items: center;
-      }
-
-      .row-label {
-        color: var(--sub);
-        font-size: 12px;
-        font-weight: 950;
-        text-align: center;
-      }
-
-      .seat-buttons {
-        display: grid;
-        grid-template-columns: repeat(var(--cols, 12), minmax(24px, 1fr));
-        gap: 5px;
-      }
-
-      .seat-button {
-        min-height: 28px;
-        padding: 0;
-        border: 1px solid rgba(17, 24, 39, 0.2);
-        border-radius: 7px;
-        color: #111827;
-        background: #fff;
-        box-shadow: none;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 900;
-      }
-
-      .seat-button:hover:not(:disabled),
-      .seat-button:focus-visible {
-        outline: 0;
-        border-color: var(--focus);
-        background: #e9f7ff;
-      }
-
-      .seat-button.selected {
-        border-color: #111827;
-        color: #fff;
-        background: #111827;
-      }
-
-      .seat-button:disabled {
-        color: #8c95a3;
-        background: var(--sold);
-        cursor: not-allowed;
-        opacity: 0.72;
-      }
-
-      .reserve-button:disabled {
-        background: #cbd5e1;
-        cursor: not-allowed;
-      }
-
-      .toast {
-        position: fixed;
-        left: 50%;
-        bottom: 24px;
-        z-index: 20;
-        width: min(440px, calc(100% - 32px));
-        padding: 14px 16px;
-        border-radius: 16px;
-        color: #fff;
-        background: #111827;
-        text-align: center;
-        font-weight: 950;
-        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.28);
-        opacity: 0;
-        transform: translate(-50%, 14px);
-        pointer-events: none;
-        transition: 160ms ease;
-      }
-
-      .toast.show {
-        opacity: 1;
-        transform: translate(-50%, 0);
-      }
-
-      @media (max-width: 1120px) {
-        .layout { grid-template-columns: 1fr; }
-        .side-card { position: static; }
-      }
-
-      @media (max-width: 720px) {
-        main {
-          width: min(100% - 20px, 1480px);
-          padding-top: 20px;
-        }
-
-        .page-head,
-        .toolbar { grid-template-columns: 1fr; }
-        .map-stage { padding: 10px; }
-        .stadium-viewport { min-height: 520px; }
-        .section-button {
-          width: var(--mw, 34px);
-          min-width: var(--mw, 34px);
-          height: var(--mh, 26px);
-          min-height: var(--mh, 26px);
-          font-size: 12px;
-          border-radius: 8px;
-        }
-        .section-button small { display: none; }
+      ::selection { background: #00aaff; color: #fff; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 999px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      @keyframes tgpop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      @keyframes tgfade { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes tgtoast { from { transform: translate(-50%, 14px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+      button { font: inherit; }
+      .shell { min-height: 100vh; height: 100vh; display: flex; flex-direction: column; background: #050507; color: #f1f3f5; overflow: hidden; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; height: 62px; padding: 0 26px; flex: 0 0 auto; border-bottom: 1px solid rgba(255,255,255,.08); background: #000; }
+      .brand-wrap { display: flex; align-items: center; gap: 14px; min-width: 0; }
+      .brand { display: flex; align-items: center; gap: 9px; }
+      .brand-mark { width: 14px; height: 14px; border-radius: 5px; background: #00aaff; }
+      .brand-name { font-size: 19px; font-weight: 800; letter-spacing: -.4px; color: #fff; }
+      .bar-line { width: 1px; height: 20px; background: rgba(255,255,255,.14); }
+      .event-mini { display: flex; flex-direction: column; min-width: 0; }
+      .event-mini strong { font-size: 14px; font-weight: 700; color: #f1f3f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .event-mini span { font-size: 11.5px; color: #908f8e; white-space: nowrap; }
+      .steps { display: flex; align-items: center; gap: 8px; }
+      .step { padding: 7px 15px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); color: #908f8e; font-size: 12.5px; font-weight: 600; }
+      .step.active { background: #00aaff; border-color: #00aaff; color: #00131f; font-weight: 800; }
+      .chev { color: #5b5e64; font-size: 12px; }
+      main { flex: 1 1 auto; min-height: 0; display: flex; gap: 18px; padding: 18px; }
+      .map-panel { flex: 1 1 auto; min-width: 0; position: relative; display: flex; flex-direction: column; background: radial-gradient(120% 120% at 50% 38%, #0d0d14 0%, #070709 70%); border: 1px solid rgba(255,255,255,.08); border-radius: 20px; overflow: hidden; }
+      .hover-card { position: absolute; top: 16px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 9px 14px; border-radius: 14px; background: rgba(7,7,12,.82); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(8px); }
+      .hover-card strong { font-size: 14px; font-weight: 800; color: #00aaff; }
+      .hover-card span { font-size: 12.5px; color: #a29e9c; }
+      .svg-wrap { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px 8px 2px; }
+      svg { width: 100%; height: 100%; }
+      .map-foot { flex: 0 0 auto; text-align: center; padding: 6px 0 14px; font-size: 12px; color: #6f737a; }
+      .block-path { cursor: pointer; transition: filter .12s ease, stroke-width .12s ease; }
+      .block-path:hover { filter: brightness(1.12); }
+      aside { flex: 0 0 384px; width: 384px; display: flex; flex-direction: column; background: #0d0d12; border: 1px solid rgba(255,255,255,.08); border-radius: 20px; overflow: hidden; }
+      .aside-head { flex: 0 0 auto; padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.07); }
+      .aside-head .sub { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #00aaff; margin-bottom: 6px; }
+      .aside-head h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.3px; color: #f4f6f8; }
+      .aside-head p { margin: 5px 0 0; font-size: 12.5px; color: #908f8e; }
+      .aside-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 22px; }
+      .section-title { font-size: 12px; font-weight: 800; letter-spacing: .4px; color: #a29e9c; margin-bottom: 11px; }
+      .legend-list, .selected-list { display: flex; flex-direction: column; gap: 7px; }
+      .legend-item { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 12px; background: #111118; border: 1px solid rgba(255,255,255,.06); }
+      .swatch { width: 15px; height: 15px; border-radius: 5px; flex: 0 0 auto; background: var(--c); box-shadow: 0 0 0 1px rgba(255,255,255,.12) inset; }
+      .legend-meta { flex: 1 1 auto; min-width: 0; }
+      .legend-meta strong { display: block; font-size: 13px; font-weight: 800; color: #eef1f3; }
+      .legend-meta span { display: block; font-size: 11px; color: #7e828a; margin-top: 2px; }
+      .legend-price { font-size: 13px; font-weight: 800; color: #cdd2d6; }
+      .selected-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+      .text-button { background: none; border: none; color: #7e828a; font-size: 11.5px; cursor: pointer; padding: 2px 4px; }
+      .text-button:hover { color: #f1f3f5; }
+      .selected-item { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 12px; background: rgba(0,170,255,.08); border: 1px solid rgba(0,170,255,.22); }
+      .selected-item .dot { width: 11px; height: 11px; border-radius: 4px; flex: 0 0 auto; background: var(--c); }
+      .selected-item-info { flex: 1 1 auto; min-width: 0; }
+      .selected-item-info strong { display: block; font-size: 13px; font-weight: 800; color: #eef1f3; }
+      .selected-item-info span { display: block; font-size: 11px; color: #7e828a; margin-top: 2px; }
+      .remove-seat { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; border: 1px solid rgba(255,255,255,.12); background: transparent; color: #a29e9c; cursor: pointer; font-size: 13px; line-height: 1; }
+      .remove-seat:hover { background: rgba(255,255,255,.08); color: #fff; }
+      .empty { padding: 22px 14px; border-radius: 12px; border: 1px dashed rgba(255,255,255,.12); text-align: center; color: #6f737a; font-size: 12.5px; line-height: 1.55; }
+      .info-table { display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.06); }
+      .info-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: transparent; font-size: 12px; }
+      .info-row:nth-child(odd) { background: rgba(255,255,255,.02); }
+      .info-row span { color: #908f8e; }
+      .info-row strong { color: #dfe2e6; font-weight: 700; }
+      .checkout { flex: 0 0 auto; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.08); background: #0a0a0f; }
+      .checkout-sum { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+      .checkout-sum span { font-size: 12.5px; color: #a29e9c; }
+      .checkout-sum strong { font-size: 20px; font-weight: 900; color: #fff; }
+      .checkout button { width: 100%; padding: 14px; border: none; border-radius: 999px; background: #00aaff; color: #00131f; font-size: 15px; font-weight: 900; cursor: pointer; letter-spacing: -.2px; }
+      .checkout button:hover { filter: brightness(1.07); }
+      .modal-backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(2,2,5,.68); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 24px; animation: tgfade .14s ease; }
+      .modal { width: min(760px, 95vw); max-height: 90vh; display: flex; flex-direction: column; background: #101016; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; overflow: hidden; animation: tgpop .16s cubic-bezier(.2,.8,.3,1); }
+      .modal-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+      .modal-title { display: flex; align-items: center; gap: 12px; }
+      .modal-chip { width: 34px; height: 34px; border-radius: 9px; background: var(--c); box-shadow: 0 0 0 1px rgba(255,255,255,.14) inset; }
+      .modal-title strong { display: block; font-size: 17px; font-weight: 900; color: #f4f6f8; }
+      .modal-title span { display: block; margin-top: 3px; font-size: 12px; color: #908f8e; }
+      .close { width: 32px; height: 32px; border-radius: 9px; border: 1px solid rgba(255,255,255,.12); background: transparent; color: #cdd2d6; font-size: 17px; cursor: pointer; line-height: 1; }
+      .close:hover { background: rgba(255,255,255,.08); color: #fff; }
+      .modal-legend { flex: 0 0 auto; display: flex; align-items: center; gap: 18px; padding: 11px 20px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 11.5px; color: #908f8e; }
+      .modal-legend span { display: flex; align-items: center; gap: 7px; }
+      .mini-seat { width: 14px; height: 14px; border-radius: 3px; background: var(--c); }
+      .seat-area { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+      .seat-row { display: flex; align-items: center; gap: 3px; }
+      .row-label { width: 18px; text-align: right; font-size: 9.5px; color: #6f737a; margin-right: 5px; flex: 0 0 auto; }
+      .seat { width: 22px; height: 19px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; line-height: 1; flex: 0 0 auto; border: 1.5px solid transparent; cursor: pointer; color: #06243a; background: var(--c); }
+      .seat:hover { filter: brightness(1.1); }
+      .seat.sold { background: #2b2b33; color: #55585f; cursor: default; }
+      .seat.selected { background: #fff; color: #0084c7; border-color: #00aaff; }
+      .field-strip { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 9px; background: linear-gradient(#1a6b42,#13502f); color: rgba(255,255,255,.92); font-size: 11.5px; font-weight: 800; letter-spacing: 6px; }
+      .modal-foot { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+      .modal-foot span { font-size: 13px; color: #a29e9c; }
+      .modal-foot button { padding: 11px 22px; border: none; border-radius: 999px; background: #fff; color: #0a0a0f; font-size: 14px; font-weight: 900; cursor: pointer; }
+      .modal-foot button:hover { filter: brightness(.94); }
+      .toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 60; padding: 13px 22px; border-radius: 999px; background: #1a1a22; border: 1px solid rgba(255,255,255,.14); color: #f1f3f5; font-size: 13.5px; font-weight: 700; box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: tgtoast .2s ease; }
+      @media (max-width: 980px) {
+        body { overflow: auto; }
+        .shell { height: auto; min-height: 100vh; }
+        main { flex-direction: column; }
+        aside { flex: 0 0 auto; width: 100%; }
+        .steps { display: none; }
+        .topbar { padding: 0 16px; }
+        .svg-wrap { min-height: 56vh; }
       }
     </style>
   </head>
   <body>
-    <main>
-      <header class="page-head">
-        <div>
-          <span class="eyebrow">Section first seat picker</span>
-          <h1>잠실 올림픽 주 경기장 구역/좌석 선택</h1>
-          <p>도면 번호 구역을 먼저 클릭한 뒤, 해당 구역 안의 상세 좌석을 선택하는 구조입니다.</p>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand"><div class="brand-mark"></div><span class="brand-name">ticketground</span></div>
+          <div class="bar-line"></div>
+          <div class="event-mini"><strong id="miniTitle">대한민국 vs 우루과이</strong><span id="miniMeta">잠실 올림픽 주경기장 · 2026.06.20 (토) 20:00</span></div>
         </div>
-        <a class="source-link" href="https://stadium.seoul.go.kr/files/2019/12/5de88ef9ee9f68.10842987.jpg" target="_blank" rel="noreferrer">참고 원본 도면</a>
+        <div class="steps"><div class="step active">1 좌석 선택</div><div class="chev">›</div><div class="step">2 가격·할인</div><div class="chev">›</div><div class="step">3 결제</div></div>
       </header>
-
-      <section class="layout">
-        <article class="map-card">
-          <div class="toolbar" aria-label="구역 검색 및 필터">
-            <label class="control">
-              <span>구역 번호 검색</span>
-              <input id="sectionSearch" type="search" placeholder="예: 35, VIP, R-24, S-1" autocomplete="off" />
-            </label>
-            <label class="control">
-              <span>등급 필터</span>
-              <select id="gradeFilter">
-                <option value="all">전체 등급</option>
-                <option value="VIP">VIP</option>
-                <option value="R">R석</option>
-                <option value="S">S석</option>
-              </select>
-            </label>
-            <div class="zoom-controls" aria-label="도면 확대 축소">
-              <button id="zoomOut" type="button">-</button>
-              <button id="zoomReset" class="ghost-button" type="button">100%</button>
-              <button id="zoomIn" type="button">+</button>
-            </div>
+      <main>
+        <section class="map-panel">
+          <div class="hover-card" id="hoverCard"><span>구역에 마우스를 올리면 잔여석이 표시됩니다</span></div>
+          <div class="svg-wrap">
+            <svg viewBox="0 0 940 760" preserveAspectRatio="xMidYMid meet" aria-label="잠실 올림픽 주경기장 좌석 구역도">
+              <defs><radialGradient id="pitchg" cx="50%" cy="42%" r="70%"><stop offset="0%" stop-color="#3a9560"></stop><stop offset="100%" stop-color="#256b43"></stop></radialGradient></defs>
+              <ellipse cx="470" cy="372" rx="164" ry="135" fill="#6e372c"></ellipse>
+              <ellipse cx="470" cy="372" rx="126" ry="103" fill="url(#pitchg)"></ellipse>
+              <ellipse cx="470" cy="372" rx="126" ry="103" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.2"></ellipse>
+              <line x1="470" y1="270" x2="470" y2="474" stroke="rgba(255,255,255,.42)" stroke-width="1.4"></line>
+              <ellipse cx="470" cy="372" rx="27" ry="22" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="1.4"></ellipse>
+              <text x="470" y="430" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.34)" style="letter-spacing:3px;font-weight:600">JAMSIL MAIN STADIUM</text>
+              <g id="blockLayer"></g>
+              <g id="overlayLayer" style="pointer-events:none"></g>
+              <g style="pointer-events:none">
+                <rect x="28" y="310" width="48" height="124" rx="12" fill="#0b0b10" stroke="rgba(255,255,255,.18)"></rect>
+                <text x="52" y="338" text-anchor="middle" font-size="14" fill="#cdd2d6" style="font-weight:700">전</text>
+                <text x="52" y="372" text-anchor="middle" font-size="14" fill="#cdd2d6" style="font-weight:700">광</text>
+                <text x="52" y="406" text-anchor="middle" font-size="14" fill="#cdd2d6" style="font-weight:700">판</text>
+                <rect x="226" y="305" width="46" height="30" rx="8" fill="#0e0e15" stroke="rgba(255,255,255,.2)"></rect>
+                <text x="249" y="320" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="#dfe3e7" style="font-weight:700">남직문</text>
+                <rect x="668" y="305" width="46" height="30" rx="8" fill="#0e0e15" stroke="rgba(255,255,255,.2)"></rect>
+                <text x="691" y="320" text-anchor="middle" dominant-baseline="central" font-size="10.5" fill="#dfe3e7" style="font-weight:700">북직문</text>
+                <text x="340" y="430" text-anchor="middle" font-size="9.5" fill="#ffb59c" style="font-weight:700">성화대</text>
+                <circle cx="340" cy="446" r="7" fill="#ff5a2b"></circle><circle cx="340" cy="446" r="7" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.2"></circle>
+              </g>
+            </svg>
           </div>
-
-          <div class="map-stage">
-            <div class="stadium-viewport" aria-label="구역 번호가 표시된 잠실 올림픽 주 경기장 도면">
-              <div class="stadium-scale" id="stadiumScale">
-                <svg class="blueprint" viewBox="0 0 1200 760" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="fieldGradient" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0" stop-color="#2fb66d" />
-                      <stop offset="1" stop-color="#15874d" />
-                    </linearGradient>
-                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#111827" flood-opacity="0.14" />
-                    </filter>
-                  </defs>
-                  <rect x="20" y="20" width="1160" height="720" rx="34" fill="#f8fbff" />
-                  <ellipse cx="600" cy="380" rx="515" ry="286" fill="#d9f1ff" stroke="#cbd5e1" stroke-width="10" filter="url(#shadow)" />
-                  <ellipse cx="600" cy="380" rx="432" ry="224" fill="#ffffff" stroke="#e6edf5" stroke-width="12" />
-                  <path d="M155 242 Q600 50 1045 242" fill="none" stroke="#9be2ff" stroke-width="82" opacity="0.75" />
-                  <path d="M118 357 Q156 242 246 164" fill="none" stroke="#9be2ff" stroke-width="82" opacity="0.75" />
-                  <path d="M1082 357 Q1044 242 954 164" fill="none" stroke="#9be2ff" stroke-width="82" opacity="0.75" />
-                  <path d="M236 586 Q600 708 964 586" fill="none" stroke="#9be2ff" stroke-width="82" opacity="0.75" />
-                  <ellipse cx="600" cy="380" rx="352" ry="178" fill="#eaffce" stroke="#d9b800" stroke-width="7" stroke-dasharray="18 12" />
-                  <path d="M290 292 Q600 174 910 292" fill="none" stroke="#7ee35f" stroke-width="58" opacity="0.78" />
-                  <path d="M292 470 Q600 592 908 470" fill="none" stroke="#7ee35f" stroke-width="58" opacity="0.78" />
-                  <rect x="440" y="308" width="320" height="148" rx="24" fill="url(#fieldGradient)" stroke="#0f6f41" stroke-width="5" />
-                  <line x1="600" y1="308" x2="600" y2="456" stroke="#eafff3" stroke-width="4" opacity="0.78" />
-                  <circle cx="600" cy="382" r="38" fill="none" stroke="#eafff3" stroke-width="4" opacity="0.78" />
-                  <text x="600" y="386" text-anchor="middle" fill="#ffffff" font-size="25" font-weight="900">FIELD</text>
-                  <text x="600" y="292" text-anchor="middle" fill="#111827" font-size="18" font-weight="900">MAIN STAGE</text>
-                </svg>
-                <div class="label-layer" id="labelLayer" aria-hidden="true"></div>
-                <div class="section-layer" id="sectionLayer"></div>
-              </div>
-            </div>
-            <div class="legend" aria-label="좌석 등급 범례">
-              <span><i class="dot" style="--dot: var(--vip)"></i>VIP 구역</span>
-              <span><i class="dot" style="--dot: var(--r)"></i>R 구역</span>
-              <span><i class="dot" style="--dot: var(--s)"></i>S 구역</span>
-              <span><i class="dot" style="--dot: var(--selected)"></i>선택 구역</span>
-              <span><i class="dot" style="--dot: var(--sold)"></i>상세 판매완료</span>
-            </div>
-            <div class="map-hint">
-              <span>1단계: 도면 번호 구역을 선택합니다.</span>
-              <span>2단계: 우측 상세 좌석표에서 실제 좌석을 선택합니다.</span>
-            </div>
+          <div class="map-foot">구역을 클릭하면 해당 구역의 좌석을 선택할 수 있어요</div>
+        </section>
+        <aside>
+          <div class="aside-head"><div class="sub" id="eventSub">2026 국제친선경기</div><h1 id="eventTitle">대한민국 vs 우루과이</h1><p id="eventVenueDate">잠실 올림픽 주경기장 · 2026.06.20 (토) 20:00</p></div>
+          <div class="aside-body">
+            <section><div class="section-title">좌석 등급</div><div class="legend-list" id="legendList"></div></section>
+            <section><div class="selected-head"><div class="section-title" style="margin:0">선택한 좌석</div><button class="text-button" id="clearBtn" hidden>전체 해제</button></div><div class="selected-list" id="selectedList"></div></section>
+            <section><div class="section-title">경기장 정보</div><div class="info-table" id="infoTable"></div></section>
           </div>
-        </article>
-
-        <aside class="side-card" aria-live="polite">
-          <h2>구역 상세 선택</h2>
-          <div class="status-grid">
-            <div class="status-box"><span>전체 구역</span><strong id="totalSections">0</strong></div>
-            <div class="status-box"><span>필터 결과</span><strong id="visibleSections">0</strong></div>
-            <div class="status-box"><span>상세 좌석</span><strong id="detailSeats">0</strong></div>
-            <div class="status-box"><span>잔여 좌석</span><strong id="availableSeats">0</strong></div>
-          </div>
-
-          <section class="section-card">
-            <h3 id="sectionTitle">구역 번호를 선택해주세요</h3>
-            <dl>
-              <div><dt>등급</dt><dd id="sectionGrade">-</dd></div>
-              <div><dt>구역</dt><dd id="sectionNumber">-</dd></div>
-              <div><dt>가격</dt><dd id="sectionPrice">-</dd></div>
-            </dl>
-          </section>
-
-          <section class="detail-card">
-            <div class="detail-head">
-              <div>
-                <h3>상세 좌석</h3>
-                <p id="detailHelp">구역을 클릭하면 좌석표가 표시됩니다.</p>
-              </div>
-              <button class="ghost-button" id="clearSelection" type="button">초기화</button>
-            </div>
-            <div class="seat-grid" id="seatGrid"></div>
-          </section>
-
-          <section class="selected-card">
-            <h3 id="selectedTitle">좌석을 선택해주세요</h3>
-            <dl>
-              <div><dt>등급</dt><dd id="selectedGrade">-</dd></div>
-              <div><dt>구역</dt><dd id="selectedSection">-</dd></div>
-              <div><dt>좌석번호</dt><dd id="selectedSeat">-</dd></div>
-              <div><dt>가격</dt><dd id="selectedPrice">-</dd></div>
-            </dl>
-            <button class="reserve-button" id="reserveButton" type="button" disabled>이 좌석 선택 완료</button>
-          </section>
+          <div class="checkout"><div class="checkout-sum"><span id="countLabel">0석 선택 · 최대 3매</span><strong id="totalPrice">₩0</strong></div><button id="checkoutBtn">예매하기</button></div>
         </aside>
-      </section>
-    </main>
-
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
+      </main>
+    </div>
+    <div id="modalHost"></div>
+    <div id="toastHost"></div>
     <script>
-      const fmt = new Intl.NumberFormat("ko-KR");
-      const gradeConfig = {
-        VIP: { label: "VIP", price: 154000, color: "var(--vip)", rows: 4, cols: 12 },
-        R: { label: "R석", price: 121000, color: "var(--r)", rows: 5, cols: 14 },
-        S: { label: "S석", price: 99000, color: "var(--s)", rows: 6, cols: 16 }
+      const config = {
+        eventTitle: "대한민국 vs 우루과이",
+        eventSub: "2026 국제친선경기",
+        eventVenue: "잠실 올림픽 주경기장",
+        eventDate: "2026.06.20 (토) 20:00",
+        maxTickets: 3
       };
-
-      const state = {
-        sections: [],
-        selectedSectionId: "",
-        selectedSeatId: "",
-        zoom: 1,
-        query: "",
-        grade: "all"
-      };
-
-      const sectionLayer = document.querySelector("#sectionLayer");
-      const labelLayer = document.querySelector("#labelLayer");
-      const stadiumScale = document.querySelector("#stadiumScale");
-      const sectionSearch = document.querySelector("#sectionSearch");
-      const gradeFilter = document.querySelector("#gradeFilter");
-      const seatGrid = document.querySelector("#seatGrid");
-
-      function seededValue(input) {
-        let hash = 2166136261;
-        for (let i = 0; i < input.length; i += 1) {
-          hash ^= input.charCodeAt(i);
-          hash = Math.imul(hash, 16777619);
-        }
-        return Math.abs(hash >>> 0);
+      const state = { detail: null, selections: {}, hover: null, toast: null };
+      const CX = 470, CY = 372, ASP = 0.82;
+      const COLORS = { VIP:'#00aaff', R:'#2f8fe0', S:'#6fb4ec', A:'#a9d2f5', B:'#d6e9fb', press:'#34343c' };
+      const GNAME  = { VIP:'VIP석', R:'R석', S:'S석', A:'A석', B:'B석' };
+      const PRICE  = { VIP:150000, R:110000, S:80000, A:55000, B:35000 };
+      let blocks = [];
+      const fmt = (n) => '₩' + Number(n).toLocaleString('ko-KR');
+      const svgNS = 'http://www.w3.org/2000/svg';
+      function rng(seed){ let s=(seed*2654435761)>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+      function pt(a,r){ return [ CX + r*Math.cos(a), CY + r*Math.sin(a)*ASP ]; }
+      function sector(a0,a1,ri,ro){
+        const p0=pt(a0,ro), p1=pt(a1,ro), p2=pt(a1,ri), p3=pt(a0,ri);
+        const f=(n)=>n.toFixed(2), A=ASP;
+        return 'M '+f(p0[0])+' '+f(p0[1])+' A '+f(ro)+' '+f(ro*A)+' 0 0 1 '+f(p1[0])+' '+f(p1[1])+' L '+f(p2[0])+' '+f(p2[1])+' A '+f(ri)+' '+f(ri*A)+' 0 0 0 '+f(p3[0])+' '+f(p3[1])+' Z';
       }
-
-      function isSold(id) {
-        return seededValue(id) % 17 === 0;
-      }
-
-      function polarPoint({ index, total, startDeg, rx, ry }) {
-        const deg = startDeg + (index / total) * 360;
-        const rad = deg * Math.PI / 180;
-        return {
-          x: Number((50 + Math.cos(rad) * rx).toFixed(2)),
-          y: Number((50 + Math.sin(rad) * ry).toFixed(2)),
-          rotate: Number((deg + 90).toFixed(2))
-        };
-      }
-
-      function addSection(section) {
-        state.sections.push(section);
-      }
-
-      function buildSections() {
-        for (let number = 1; number <= 38; number += 1) {
-          const point = polarPoint({ index: number - 1, total: 38, startDeg: -90, rx: 43.5, ry: 38 });
-          addSection({
-            id: `S-${number}`,
-            grade: "S",
-            ring: "2층 외곽",
-            number,
-            label: String(number),
-            x: point.x,
-            y: point.y,
-            rotate: point.rotate,
-            width: 46,
-            height: 34
-          });
-        }
-
-        for (let number = 24; number <= 70; number += 1) {
-          const index = number - 24;
-          const point = polarPoint({ index, total: 47, startDeg: -152, rx: 34.5, ry: 27.5 });
-          const isVipBand = number >= 35 && number <= 40;
-          const vipX = 39.5 + (number - 35) * 4.25;
-          addSection({
-            id: `${isVipBand ? "VIP" : "R"}-${number}`,
-            grade: isVipBand ? "VIP" : "R",
-            ring: isVipBand ? "VIP 중앙" : "1층 내야",
-            number,
-            label: String(number),
-            x: isVipBand ? vipX : point.x,
-            y: isVipBand ? 24.5 : point.y,
-            rotate: isVipBand ? 0 : point.rotate,
-            width: isVipBand ? 50 : 40,
-            height: isVipBand ? 36 : 30
-          });
-        }
-
-        labelLayer.innerHTML = [
-          '<span class="section-label" style="--x:50; --y:9">2층 외곽 1-38</span>',
-          '<span class="section-label" style="--x:50; --y:21">VIP 35-40</span>',
-          '<span class="section-label" style="--x:20; --y:50">1층 내야 24-70</span>',
-          '<span class="section-label" style="--x:50; --y:61">FIELD</span>'
-        ].join("");
-      }
-
-      function sectionMatches(section) {
-        const gradeMatch = state.grade === "all" || section.grade === state.grade;
-        const query = state.query.trim().toLowerCase();
-        const queryMatch = !query || `${section.id} ${section.number} ${section.ring} ${gradeConfig[section.grade].label}`.toLowerCase().includes(query);
-        return { gradeMatch, queryMatch, visible: gradeMatch && queryMatch };
-      }
-
-      function renderSections() {
-        sectionLayer.innerHTML = state.sections.map((section) => {
-          const match = sectionMatches(section);
-          const active = state.selectedSectionId === section.id;
-          const classes = ["section-button", `grade-${section.grade.toLowerCase()}`];
-          if (active) classes.push("active");
-          if (!match.visible) classes.push("dimmed");
-          return `
-            <button
-              class="${classes.join(" ")}"
-              type="button"
-              data-section-id="${section.id}"
-              style="--x:${section.x}; --y:${section.y}; --rotate:${section.rotate}deg; --section-color:${gradeConfig[section.grade].color}; --w:${section.width}px; --h:${section.height}px; --mw:${Math.max(30, section.width - 10)}px; --mh:${Math.max(24, section.height - 8)}px"
-              aria-pressed="${active ? "true" : "false"}"
-              aria-label="${gradeConfig[section.grade].label} ${section.number}구역 상세 좌석 선택"
-              title="${gradeConfig[section.grade].label} ${section.number}구역 · ${fmt.format(gradeConfig[section.grade].price)}원"
-            >
-              ${section.label}<small>${section.grade}</small>
-            </button>
-          `;
-        }).join("");
-        updateSummary();
-      }
-
-      function selectedSection() {
-        return state.sections.find((section) => section.id === state.selectedSectionId);
-      }
-
-      function buildSeatsForSection(section) {
-        if (!section) return [];
-        const config = gradeConfig[section.grade];
-        const seats = [];
-        for (let row = 0; row < config.rows; row += 1) {
-          const rowName = String.fromCharCode(65 + row);
-          for (let col = 1; col <= config.cols; col += 1) {
-            const id = `${section.id}-${rowName}-${String(col).padStart(2, "0")}`;
-            seats.push({
-              id,
-              row: rowName,
-              col,
-              grade: section.grade,
-              sectionId: section.id,
-              sectionNumber: section.number,
-              sectionRing: section.ring,
-              price: config.price,
-              sold: isSold(id)
-            });
+      function buildBlocks(){
+        const rings = [
+          { name:'1F', ri:174, ro:228, N:34, grade:'R', cols:16, rows:9, topType:'press' },
+          { name:'2F', ri:238, ro:302, N:38, grade:'S', cols:18, rows:11, topType:'vip' },
+          { name:'3F', ri:314, ro:386, N:38, grade:'A', cols:23, rows:14 }
+        ];
+        const top = -Math.PI/2, out = [];
+        let uid = 0;
+        rings.forEach(ring => {
+          const step = 2*Math.PI/ring.N, gap = step*0.18;
+          for(let i=0;i<ring.N;i++){
+            const center = top + i*step;
+            const a0 = center-(step-gap)/2, a1 = center+(step-gap)/2;
+            let type='normal', grade=ring.grade, num=String(i+1);
+            if(i===0 && ring.topType==='press'){ type='press'; grade='press'; num=''; }
+            else if(i===0 && ring.topType==='vip'){ type='vip'; grade='VIP'; num='V'; }
+            if(ring.name==='3F'){
+              let deg=((center-top)*180/Math.PI)%360; if(deg<0) deg+=360;
+              grade = (deg<58||deg>302||(deg>122&&deg<238)) ? 'A' : 'B';
+            }
+            let cols=ring.cols+((i%3)-1), rows=ring.rows+(i%2);
+            if(type==='vip'){ cols=14; rows=7; }
+            if(type==='press'){ cols=0; rows=0; }
+            const total=cols*rows, random=rng(uid+17), ratio=0.16+random()*0.5;
+            const soldSet=new Set();
+            if(total){ for(let rr=0;rr<rows;rr++) for(let cc=0;cc<cols;cc++){ if(random()<ratio) soldSet.add(rr+'-'+cc); } }
+            const cen=pt(center,(ring.ri+ring.ro)/2), badge=pt(center, ring.ro-13);
+            out.push({ id:'b'+uid, ring:ring.name, type, grade, num, d:sector(a0,a1,ring.ri,ring.ro), lx:cen[0], ly:cen[1], bx:badge[0], by:badge[1], cols, rows, total, soldSet, remaining: total-soldSet.size, fs:ring.name==='3F'?12.5:(ring.name==='2F'?11.5:10.5) });
+            uid++;
           }
+        });
+        return out;
+      }
+      const byId = (id) => blocks.find(b=>b.id===id);
+      const totalSel = () => Object.values(state.selections).reduce((a,v)=>a+v.length,0);
+      function setState(next){ Object.assign(state, typeof next === 'function' ? next(state) : next); render(); }
+      function showToast(msg){ state.toast = msg; renderToast(); clearTimeout(showToast.t); showToast.t=setTimeout(()=>{ state.toast=null; renderToast(); },2200); }
+      function toggleSeat(bid, sid){
+        const arr = state.selections[bid] ? state.selections[bid].slice() : [];
+        const idx = arr.indexOf(sid);
+        if(idx < 0 && totalSel() >= config.maxTickets){ showToast('최대 '+config.maxTickets+'매까지 선택할 수 있어요'); return; }
+        const next = { ...state.selections };
+        if(idx >= 0) arr.splice(idx,1); else arr.push(sid);
+        if(arr.length) next[bid] = arr; else delete next[bid];
+        setState({ selections: next });
+      }
+      function checkout(){ if(totalSel()===0){ showToast('좌석을 먼저 선택해 주세요'); return; } showToast('예매 정보가 확인되었어요 (프로토타입)'); }
+      function blockLabel(b){ return b.type==='vip' ? 'VIP' : b.num+'구역'; }
+      function labelFillFor(b, soldOut){ if(b.type==='press') return '#9aa0a8'; if(soldOut) return '#8c9098'; if(b.grade==='R') return '#fff'; if(b.grade==='VIP') return '#06243a'; return '#0a2435'; }
+      function renderMap(){
+        const blockLayer = document.querySelector('#blockLayer');
+        const overlayLayer = document.querySelector('#overlayLayer');
+        blockLayer.replaceChildren(); overlayLayer.replaceChildren();
+        blocks.forEach(b => {
+          const selCount=(state.selections[b.id]||[]).length;
+          const soldOut=b.type!=='press' && b.remaining===0;
+          const hovered=state.hover===b.id;
+          const path=document.createElementNS(svgNS,'path');
+          path.setAttribute('d', b.d);
+          path.setAttribute('fill', b.type==='press'?COLORS.press:(soldOut?'#3a3a42':COLORS[b.grade]));
+          path.setAttribute('stroke', (selCount>0||hovered)?'#fff':'rgba(5,5,10,.35)');
+          path.setAttribute('stroke-width', selCount>0?2.6:(hovered?2:0.8));
+          path.setAttribute('stroke-linejoin','round');
+          path.setAttribute('data-block-id', b.id);
+          path.setAttribute('aria-label', b.type === 'press' ? '기자석' : `${blockLabel(b)} ${GNAME[b.grade]} 좌석 선택`);
+          path.setAttribute('tabindex', b.type === 'press' ? '-1' : '0');
+          path.classList.add('block-path');
+          if(b.type !== 'press') path.addEventListener('click', () => setState({ detail:b.id }));
+          path.addEventListener('keydown', (event) => {
+            if (b.type !== 'press' && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              setState({ detail:b.id });
+            }
+          });
+          path.addEventListener('mouseenter', () => setState({ hover:b.id }));
+          path.addEventListener('mouseleave', () => { if(state.hover === b.id) setState({ hover:null }); });
+          blockLayer.appendChild(path);
+          if(b.num){
+            const text=document.createElementNS(svgNS,'text');
+            text.setAttribute('x',b.lx); text.setAttribute('y',b.ly); text.setAttribute('fill',labelFillFor(b, soldOut)); text.setAttribute('font-size',b.fs); text.setAttribute('text-anchor','middle'); text.setAttribute('dominant-baseline','central'); text.style.fontWeight='700'; text.textContent=b.num; overlayLayer.appendChild(text);
+          }
+          if(selCount>0){
+            const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx',b.bx); c.setAttribute('cy',b.by); c.setAttribute('r',9.5); c.setAttribute('fill','#00aaff'); c.setAttribute('stroke','#fff'); c.setAttribute('stroke-width','1.5'); overlayLayer.appendChild(c);
+            const t=document.createElementNS(svgNS,'text'); t.setAttribute('x',b.bx); t.setAttribute('y',b.by); t.setAttribute('fill','#fff'); t.setAttribute('font-size','11'); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central'); t.style.fontWeight='800'; t.textContent=String(selCount); overlayLayer.appendChild(t);
+          }
+        });
+      }
+      function renderHover(){
+        const node=document.querySelector('#hoverCard');
+        const b=state.hover && byId(state.hover);
+        if(!b){ node.innerHTML='<span>구역에 마우스를 올리면 잔여석이 표시됩니다</span>'; return; }
+        const num = b.type==='press' ? 'PRESS' : blockLabel(b);
+        const text = b.type==='press' ? '기자석 · 관계자 전용' : `${GNAME[b.grade]} · 잔여 ${b.remaining}석 / 총 ${b.total}석`;
+        node.innerHTML=`<strong>${num}</strong><span>${text}</span>`;
+      }
+      function renderLegend(){
+        const node=document.querySelector('#legendList');
+        node.innerHTML=['VIP','R','S','A','B'].map(g=>{
+          const rem=blocks.filter(b=>b.grade===g).reduce((a,b)=>a+b.remaining,0);
+          return `<div class="legend-item"><div class="swatch" style="--c:${COLORS[g]}"></div><div class="legend-meta"><strong>${GNAME[g]}</strong><span>잔여 ${rem.toLocaleString('ko-KR')}석</span></div><div class="legend-price">${fmt(PRICE[g])}</div></div>`;
+        }).join('');
+      }
+      function renderSelections(){
+        const node=document.querySelector('#selectedList');
+        const clear=document.querySelector('#clearBtn');
+        const rows=[];
+        Object.keys(state.selections).forEach(bid=>{
+          const b=byId(bid);
+          (state.selections[bid]||[]).slice().sort((x,y)=>{ const [a,c]=x.split('-').map(Number),[d,e]=y.split('-').map(Number); return a-d||c-e; }).forEach(sid=>{
+            const [rr,cc]=sid.split('-').map(Number);
+            rows.push({ bid, sid, html:`<div class="selected-item"><div class="dot" style="--c:${COLORS[b.grade]}"></div><div class="selected-item-info"><strong>${blockLabel(b)} · ${rr+1}열 ${cc+1}번</strong><span>${GNAME[b.grade]} · ${fmt(PRICE[b.grade])}</span></div><button class="remove-seat" data-remove="${bid}:${sid}">×</button></div>` });
+          });
+        });
+        clear.hidden = rows.length === 0;
+        node.innerHTML = rows.length ? rows.map(r=>r.html).join('') : '<div class="empty">아직 선택한 좌석이 없어요.<br>경기장에서 구역을 골라 보세요.</div>';
+        node.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => { const [bid,sid]=btn.dataset.remove.split(':'); toggleSeat(bid,sid); }));
+      }
+      function renderInfo(){
+        const rows=[['총 면적','132,200㎡'],['총 좌석','65,599석 · 112블럭'],['1층','12,693석 · 34블럭'],['2층','15,125석 · 39블럭'],['중2층 VIP','976석 · 1블럭'],['3층','36,805석 · 38블럭'],['출입구','외측 68 · 내측 75']];
+        document.querySelector('#infoTable').innerHTML=rows.map(([k,v])=>`<div class="info-row"><span>${k}</span><strong>${v}</strong></div>`).join('');
+      }
+      function renderTotals(){
+        const count=totalSel();
+        const total=Object.keys(state.selections).reduce((a,bid)=>a+state.selections[bid].length*PRICE[byId(bid).grade],0);
+        document.querySelector('#countLabel').textContent=`${count}석 선택 · 최대 ${config.maxTickets}매`;
+        document.querySelector('#totalPrice').textContent=fmt(total);
+      }
+      function renderModal(){
+        const host=document.querySelector('#modalHost');
+        const b=state.detail && byId(state.detail);
+        if(!b){ host.innerHTML=''; return; }
+        const selSet=new Set(state.selections[b.id]||[]);
+        let rows='';
+        for(let r=0;r<b.rows;r++){
+          let seats='';
+          for(let c=0;c<b.cols;c++){
+            const id=r+'-'+c, sold=b.soldSet.has(id), isSel=selSet.has(id);
+            seats += `<button class="seat ${sold?'sold':''} ${isSel?'selected':''}" data-seat="${id}" ${sold?'disabled':''}>${c+1}</button>`;
+          }
+          rows += `<div class="seat-row"><div class="row-label">${r+1}</div>${seats}</div>`;
         }
-        return seats;
+        host.innerHTML=`<div class="modal-backdrop" id="modalBackdrop"><div class="modal" id="modal"><div class="modal-head"><div class="modal-title"><div class="modal-chip" style="--c:${COLORS[b.grade]}"></div><div><strong>${blockLabel(b)}</strong><span>${GNAME[b.grade]} · ${fmt(PRICE[b.grade])} · 잔여 ${b.remaining}석 / 총 ${b.total}석</span></div></div><button class="close" id="closeModal">×</button></div><div class="modal-legend"><span><div class="mini-seat" style="--c:${COLORS[b.grade]}"></div>예매 가능</span><span><div class="mini-seat" style="background:#fff;border:1.5px solid #00aaff"></div>선택</span><span><div class="mini-seat" style="background:#2b2b33"></div>매진</span></div><div class="seat-area">${rows}</div><div class="field-strip">◀  경기장 · FIELD  ▶</div><div class="modal-foot"><span>이 구역 선택 <b style="color:#00aaff">${selSet.size}</b>석 · ${totalSel()}석 선택 · 최대 ${config.maxTickets}매</span><button id="doneModal">선택 완료</button></div></div></div>`;
+        document.querySelector('#modalBackdrop').addEventListener('click', () => setState({ detail:null }));
+        document.querySelector('#modal').addEventListener('click', e => e.stopPropagation());
+        document.querySelector('#closeModal').addEventListener('click', () => setState({ detail:null }));
+        document.querySelector('#doneModal').addEventListener('click', () => setState({ detail:null }));
+        host.querySelectorAll('[data-seat]').forEach(btn => btn.addEventListener('click', () => toggleSeat(b.id, btn.dataset.seat)));
       }
-
-      function selectedSeat() {
-        const section = selectedSection();
-        return buildSeatsForSection(section).find((seat) => seat.id === state.selectedSeatId);
-      }
-
-      function renderSeatGrid() {
-        const section = selectedSection();
-        if (!section) {
-          seatGrid.innerHTML = '<p>도면에서 번호 구역을 먼저 선택해주세요.</p>';
-          document.querySelector("#detailHelp").textContent = "구역을 클릭하면 좌석표가 표시됩니다.";
-          updateSummary();
-          return;
-        }
-
-        const config = gradeConfig[section.grade];
-        const seats = buildSeatsForSection(section);
-        const rows = Array.from({ length: config.rows }, (_, index) => String.fromCharCode(65 + index));
-        document.querySelector("#detailHelp").textContent = `${gradeConfig[section.grade].label} ${section.number}구역의 상세 좌석입니다.`;
-        seatGrid.innerHTML = rows.map((row) => {
-          const rowSeats = seats.filter((seat) => seat.row === row);
-          return `
-            <div class="seat-row">
-              <span class="row-label">${row}</span>
-              <div class="seat-buttons" style="--cols:${config.cols}">
-                ${rowSeats.map((seat) => `
-                  <button
-                    class="seat-button ${state.selectedSeatId === seat.id ? "selected" : ""}"
-                    type="button"
-                    data-seat-id="${seat.id}"
-                    ${seat.sold ? "disabled" : ""}
-                    aria-pressed="${state.selectedSeatId === seat.id ? "true" : "false"}"
-                    aria-label="${seat.id} ${seat.sold ? "판매완료" : "선택 가능"}"
-                    title="${seat.id} · ${fmt.format(seat.price)}원${seat.sold ? " · 판매완료" : ""}"
-                  >${seat.col}</button>
-                `).join("")}
-              </div>
-            </div>
-          `;
-        }).join("");
-        updateSummary();
-      }
-
-      function updateSummary() {
-        const visible = state.sections.filter((section) => sectionMatches(section).visible).length;
-        const section = selectedSection();
-        const seats = buildSeatsForSection(section);
-        const available = seats.filter((seat) => !seat.sold).length;
-        const seat = selectedSeat();
-
-        document.querySelector("#totalSections").textContent = fmt.format(state.sections.length);
-        document.querySelector("#visibleSections").textContent = fmt.format(visible);
-        document.querySelector("#detailSeats").textContent = section ? fmt.format(seats.length) : "0";
-        document.querySelector("#availableSeats").textContent = section ? fmt.format(available) : "0";
-
-        document.querySelector("#sectionTitle").textContent = section ? `${section.number}구역 선택됨` : "구역 번호를 선택해주세요";
-        document.querySelector("#sectionGrade").textContent = section ? gradeConfig[section.grade].label : "-";
-        document.querySelector("#sectionNumber").textContent = section ? `${section.ring} · ${section.number}구역` : "-";
-        document.querySelector("#sectionPrice").textContent = section ? `${fmt.format(gradeConfig[section.grade].price)}원` : "-";
-
-        document.querySelector("#selectedTitle").textContent = seat ? "선택된 좌석" : "좌석을 선택해주세요";
-        document.querySelector("#selectedGrade").textContent = seat ? gradeConfig[seat.grade].label : "-";
-        document.querySelector("#selectedSection").textContent = seat ? `${seat.sectionRing} · ${seat.sectionNumber}구역` : "-";
-        document.querySelector("#selectedSeat").textContent = seat ? seat.id : "-";
-        document.querySelector("#selectedPrice").textContent = seat ? `${fmt.format(seat.price)}원` : "-";
-        document.querySelector("#reserveButton").disabled = !seat;
-      }
-
-      function setZoom(value) {
-        state.zoom = Math.min(1.65, Math.max(0.82, Number(value.toFixed(2))));
-        stadiumScale.style.setProperty("--zoom", state.zoom);
-        document.querySelector("#zoomReset").textContent = `${Math.round(state.zoom * 100)}%`;
-      }
-
-      function showToast(message) {
-        const toast = document.querySelector("#toast");
-        toast.textContent = message;
-        toast.classList.add("show");
-        window.setTimeout(() => toast.classList.remove("show"), 2200);
-      }
-
-      sectionLayer.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-section-id]");
-        if (!button) return;
-        state.selectedSectionId = button.dataset.sectionId;
-        state.selectedSeatId = "";
-        renderSections();
-        renderSeatGrid();
-      });
-
-      seatGrid.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-seat-id]");
-        if (!button || button.disabled) return;
-        state.selectedSeatId = button.dataset.seatId;
-        renderSeatGrid();
-      });
-
-      sectionSearch.addEventListener("input", (event) => {
-        state.query = event.target.value;
-        renderSections();
-      });
-
-      gradeFilter.addEventListener("change", (event) => {
-        state.grade = event.target.value;
-        renderSections();
-      });
-
-      document.querySelector("#zoomIn").addEventListener("click", () => setZoom(state.zoom + 0.12));
-      document.querySelector("#zoomOut").addEventListener("click", () => setZoom(state.zoom - 0.12));
-      document.querySelector("#zoomReset").addEventListener("click", () => setZoom(1));
-
-      document.querySelector("#clearSelection").addEventListener("click", () => {
-        state.selectedSectionId = "";
-        state.selectedSeatId = "";
-        sectionSearch.value = "";
-        gradeFilter.value = "all";
-        state.query = "";
-        state.grade = "all";
-        renderSections();
-        renderSeatGrid();
-      });
-
-      document.querySelector("#reserveButton").addEventListener("click", () => {
-        const seat = selectedSeat();
-        if (!seat) return;
-        showToast(`${seat.id} 좌석을 선택했습니다.`);
-      });
-
-      buildSections();
-      setZoom(1);
-      renderSections();
-      renderSeatGrid();
+      function renderToast(){ document.querySelector('#toastHost').innerHTML = state.toast ? `<div class="toast">${state.toast}</div>` : ''; }
+      function render(){ renderMap(); renderHover(); renderLegend(); renderSelections(); renderInfo(); renderTotals(); renderModal(); renderToast(); }
+      document.querySelector('#clearBtn').addEventListener('click', () => setState({ selections:{} }));
+      document.querySelector('#checkoutBtn').addEventListener('click', checkout);
+      document.querySelector('#miniTitle').textContent=config.eventTitle;
+      document.querySelector('#miniMeta').textContent=`${config.eventVenue} · ${config.eventDate}`;
+      document.querySelector('#eventSub').textContent=config.eventSub;
+      document.querySelector('#eventTitle').textContent=config.eventTitle;
+      document.querySelector('#eventVenueDate').textContent=`${config.eventVenue} · ${config.eventDate}`;
+      blocks = buildBlocks();
+      render();
     </script>
   </body>
 </html>
