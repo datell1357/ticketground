@@ -16,7 +16,7 @@ const appState = {
   paymentMethod: "BALANCE",
   seatMap: null,
   seatMapEventId: "",
-  activeProductTab: "productNotice"
+  activeProductTab: "all"
 };
 
 const paymentMethods = [
@@ -702,9 +702,10 @@ function renderProductSummary() {
 }
 
 function renderProductTabs() {
-  const activeTab = document.querySelector(`[data-product-panel="${appState.activeProductTab}"]`)
+  const isAll = appState.activeProductTab === "all";
+  const activeTab = isAll || document.querySelector(`[data-product-panel="${appState.activeProductTab}"]`)
     ? appState.activeProductTab
-    : "productNotice";
+    : "all";
   appState.activeProductTab = activeTab;
   document.querySelectorAll("[data-product-tab]").forEach((tab) => {
     const isActive = tab.dataset.productTab === activeTab;
@@ -712,7 +713,7 @@ function renderProductTabs() {
     tab.setAttribute("aria-selected", String(isActive));
   });
   document.querySelectorAll("[data-product-panel]").forEach((panel) => {
-    panel.hidden = panel.dataset.productPanel !== activeTab;
+    panel.hidden = activeTab !== "all" && panel.dataset.productPanel !== activeTab;
   });
 }
 
@@ -950,7 +951,7 @@ async function selectEventForBooking(eventId) {
   appState.bookingStep = "date";
   appState.selectedSeatId = "";
   appState.activeZone = "all";
-  appState.activeProductTab = "productNotice";
+  appState.activeProductTab = "all";
   ensureBookingSelection();
   await loadSeatMap();
   renderTickets();

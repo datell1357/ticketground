@@ -143,7 +143,8 @@
         </div>
 
         <div class="product-tabs" role="tablist" aria-label="상품 상세 메뉴">
-          <a class="active" href="#productNotice" data-product-tab="productNotice" role="tab" aria-selected="true" aria-controls="productNotice">공지사항</a>
+          <a class="active" href="#productAll" data-product-tab="all" role="tab" aria-selected="true">전체</a>
+          <a href="#productNotice" data-product-tab="productNotice" role="tab" aria-selected="false" aria-controls="productNotice">공지사항</a>
           <a href="#productCast" data-product-tab="productCast" role="tab" aria-selected="false" aria-controls="productCast">캐스팅</a>
           <a href="#productDetail" data-product-tab="productDetail" role="tab" aria-selected="false" aria-controls="productDetail">상품상세</a>
           <a href="#productPrice" data-product-tab="productPrice" role="tab" aria-selected="false" aria-controls="productPrice">가격/할인</a>
@@ -158,7 +159,7 @@
               <h3>필수 확인 사항</h3>
               <p>예매자는 공연 관람 안내, 관람 연령, 티켓 수령, 취소 및 환불 규정을 확인한 것으로 간주됩니다. 불법 거래와 사설 양도는 보호받을 수 없으며, Ticketground 공식 경로만 이용해주세요.</p>
             </section>
-            <section class="product-info-block" id="productCast" data-product-panel="productCast" role="tabpanel" hidden>
+            <section class="product-info-block" id="productCast" data-product-panel="productCast" role="tabpanel">
               <h3>캐스팅</h3>
               <div class="cast-list">
                 <span>MAIN STAGE · TIG</span>
@@ -166,11 +167,11 @@
                 <span>DANCE UNIT · Ground Move</span>
               </div>
             </section>
-            <section class="product-info-block" id="productDetail" data-product-panel="productDetail" role="tabpanel" hidden>
+            <section class="product-info-block" id="productDetail" data-product-panel="productDetail" role="tabpanel">
               <h3>상품 상세</h3>
               <p>강렬한 LED 무대, 팬 라이트 연출, 실시간 QR 입장을 결합한 Ticketground 단독 오픈 콘서트입니다.</p>
             </section>
-            <section class="product-info-block" id="productPrice" data-product-panel="productPrice" role="tabpanel" hidden>
+            <section class="product-info-block" id="productPrice" data-product-panel="productPrice" role="tabpanel">
               <h3>가격/할인정보</h3>
               <div class="price-table">
                 <div><span>VIP</span><strong id="productVipPrice">154,000원</strong></div>
@@ -178,15 +179,15 @@
                 <div><span>S석</span><strong id="productSPrice">99,000원</strong></div>
               </div>
             </section>
-            <section class="product-info-block" id="productGuide" data-product-panel="productGuide" role="tabpanel" hidden>
+            <section class="product-info-block" id="productGuide" data-product-panel="productGuide" role="tabpanel">
               <h3>이용안내</h3>
               <p>관람 3시간 전까지 예매 가능하며, 입장 QR은 공연 당일 앱에서 동적으로 발급됩니다.</p>
             </section>
-            <section class="product-info-block" id="productRefund" data-product-panel="productRefund" role="tabpanel" hidden>
+            <section class="product-info-block" id="productRefund" data-product-panel="productRefund" role="tabpanel">
               <h3>취소 및 환불 규정</h3>
               <p>예매 당일 자정 전 취소는 수수료 없이 가능하며, 관람일이 가까워질수록 취소 수수료가 적용됩니다.</p>
             </section>
-            <section class="product-info-block" id="productPlace" data-product-panel="productPlace" role="tabpanel" hidden>
+            <section class="product-info-block" id="productPlace" data-product-panel="productPlace" role="tabpanel">
               <h3>장소</h3>
               <p id="productPlaceCopy">KSPO Dome · 서울특별시 송파구 올림픽로 424</p>
             </section>
