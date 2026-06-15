@@ -396,5 +396,28 @@ class Component extends DCLogic {
   }
 }
 </script>
+<script>
+(() => {
+  const params = new URLSearchParams(window.location.search);
+  const overrides = {};
+  for (const key of ["eventTitle", "eventSub", "eventVenue", "eventDate"]) {
+    const value = params.get(key);
+    if (value) overrides[key] = value;
+  }
+  const maxTickets = Number(params.get("maxTickets"));
+  if (Number.isFinite(maxTickets) && maxTickets > 0) overrides.maxTickets = maxTickets;
+  if (!Object.keys(overrides).length) return;
+
+  const applyOverrides = () => {
+    const rootName = typeof window.__dcRootName === "function" ? window.__dcRootName() : "";
+    if (window.__dcSetProps && rootName && rootName !== "Root" && window.__dcRegistry?.[rootName]) {
+      window.__dcSetProps(rootName, overrides);
+      return;
+    }
+    window.setTimeout(applyOverrides, 50);
+  };
+  applyOverrides();
+})();
+</script>
 </body>
 </html>

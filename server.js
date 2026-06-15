@@ -1087,9 +1087,14 @@ async function serveStatic(req, res, rootDir, fallback = "/index.html") {
     res.end();
     return;
   }
+  const dcStatic = rootDir === publicDir ? {
+    "/좌석선택.dc.html": path.join(__dirname, "좌석선택.dc.html"),
+    "/support.js": path.join(__dirname, "support.js")
+  } : {};
+  const specialPath = dcStatic[requested];
   const safePath = path.normalize(requested).replace(/^(\.\.[/\\])+/, "");
-  const filePath = path.join(rootDir, safePath);
-  if (!filePath.startsWith(rootDir)) throw httpError(403, "FORBIDDEN", "잘못된 경로입니다.");
+  const filePath = specialPath || path.join(rootDir, safePath);
+  if (!specialPath && !filePath.startsWith(rootDir)) throw httpError(403, "FORBIDDEN", "잘못된 경로입니다.");
   let file;
   try {
     file = await readFile(filePath);

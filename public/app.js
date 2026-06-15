@@ -490,11 +490,40 @@ function renderDateSelection() {
         `).join("")}
       </div>
       <div class="booking-step-actions">
-        <button type="button" data-booking-step="seat">선택한 날짜로 좌석 선택</button>
+        <button type="button" onclick="window.openSeatSelector()">예매하기</button>
       </div>
     </div>
   `;
 }
+
+function seatSelectorUrl() {
+  const event = currentEvent();
+  const date = currentDate();
+  const url = new URL("/좌석선택.dc.html", window.location.origin);
+  url.searchParams.set("eventTitle", event.title);
+  url.searchParams.set("eventSub", event.badge || categoryLabels[event.category] || "Ticketground");
+  url.searchParams.set("eventVenue", event.venue);
+  url.searchParams.set("eventDate", formatDateTime(date.startsAt));
+  url.searchParams.set("maxTickets", "4");
+  return url.toString();
+}
+
+window.openSeatSelector = function openSeatSelector() {
+  if (!currentDate()) {
+    toast("예매 날짜를 먼저 선택해주세요.");
+    return;
+  }
+  const popup = window.open(
+    seatSelectorUrl(),
+    "ticketground-seat-selector",
+    "popup=yes,width=1280,height=860,menubar=no,toolbar=no,location=no,status=no"
+  );
+  if (!popup) {
+    toast("팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 예매하기를 눌러주세요.");
+    return;
+  }
+  popup.focus();
+};
 
 function renderSeatMap(tickets) {
   const event = currentEvent();
@@ -977,7 +1006,7 @@ document.addEventListener("click", async (event) => {
     if (dateButton) {
       appState.selectedDateId = dateButton.dataset.bookingDate;
       appState.selectedSeatId = "";
-      appState.bookingStep = "seat";
+      appState.bookingStep = "date";
       renderTickets();
       return;
     }
