@@ -222,3 +222,34 @@ test("backend resale draw applies official fee policy and settlement fields", as
   assert.equal(match.payload.sellerSettlement, price);
   assert.equal(match.payload.feeRate, 0.05);
 });
+
+test("backend resale draw keeps pool open when balance buyer cannot pay", async (t) => {
+  const { baseUrl, adminUrl } = await startServer(t);
+  const { ticket } = await buyFirstTicket(baseUrl);
+  const pool = await api(baseUrl, "/api/resale/list", {
+    sellerId: "user_fan_a",
+    ticketId: ticket.id,
+    price: ticket.faceValue
+  });
+
+  await api(baseUrl, "/api/resale/join", {
+    buyerId: "user_fan_b",
+    poolId: pool.data.id
+  });
+
+  const draw = await api(baseUrl, "/api/resale/draw", {
+    poolId: pool.data.id,
+    paymentMethod: "BALANCE"
+  });
+  assert.equal(draw.data.skipped, true);
+  assert.equal(draw.data.reason, "INSUFFICIENT_BALANCE");
+  assert.equal(draw.data.pool.status, "OPEN");
+  assert.equal(draw.data.pool.buyerFee, null);
+  assert.equal(draw.data.ticket, undefined);
+
+  const admin = await api(adminUrl, "/api/admin/summary");
+  const poolState = admin.data.resalePools.find((item) => item.id === pool.data.id);
+  assert.deepEqual(poolState.buyers, []);
+  const skip = admin.data.ledger.find((entry) => entry.action === "MATCH_SKIPPED_INSUFFICIENT_BALANCE");
+  assert.equal(skip.payload.poolId, pool.data.id);
+});
