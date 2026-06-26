@@ -69,6 +69,12 @@ test("backend issues virtual ticket, app-only admission QR, and one-use gate ver
   assert.equal(stateAfterQr.data.supportThreads, undefined);
   assert.equal(stateAfterQr.data.backendSummary.admissionCredentials, undefined);
   assert.equal(stateAfterQr.data.ledger.latestHash, undefined);
+
+  const userTickets = await api(baseUrl, "/api/users/user_fan_a/tickets");
+  assert.equal(userTickets.data.length, 1);
+  assert.equal(userTickets.data[0].id, ticket.id);
+  assert.equal(userTickets.data[0].faceValue, ticket.faceValue);
+  assert.equal(userTickets.data[0].ownerId, undefined);
 });
 
 test("backend rejects web admission QR, early QR activation, malformed watchlist, and out-of-policy resale", async (t) => {
@@ -141,6 +147,17 @@ test("backend rejects web admission QR, early QR activation, malformed watchlist
     price: ticket.maxPrice + 1
   }, 422);
   assert.equal(resale.error.code, "PRICE_OUT_OF_POLICY");
+  assert.equal(resale.error.detail.minPrice, ticket.minPrice);
+  assert.equal(resale.error.detail.maxPrice, ticket.maxPrice);
+
+  const belowMinResale = await api(early.baseUrl, "/api/resale/list", {
+    sellerId: "user_fan_a",
+    ticketId: ticket.id,
+    price: ticket.minPrice - 1
+  }, 422);
+  assert.equal(belowMinResale.error.code, "PRICE_OUT_OF_POLICY");
+  assert.equal(belowMinResale.error.detail.minPrice, ticket.minPrice);
+  assert.equal(belowMinResale.error.detail.maxPrice, ticket.maxPrice);
 
   const ledger = await api(early.baseUrl, "/api/ledger/verify");
   assert.equal(ledger.data.ok, true);
@@ -183,6 +200,37 @@ test("backend watchlist, notification, seat map, and admin summary APIs remain u
   assert.ok(admin.data.stats.notificationJobs >= 3);
 });
 
+test("public demo session supports login profile lookup and nickname update without exposing state users", async (t) => {
+  const { baseUrl } = await startServer(t);
+
+  const state = await api(baseUrl, "/api/state");
+  const publicUser = state.data.users.find((item) => item.id === "user_fan_a");
+  assert.equal(publicUser.name, "민서");
+  assert.equal(publicUser.balance, undefined);
+  assert.equal(publicUser.status, undefined);
+  assert.equal(publicUser.trustScore, undefined);
+
+  const session = await api(baseUrl, "/api/users/user_fan_a/session");
+  assert.equal(session.data.id, "user_fan_a");
+  assert.equal(session.data.name, "민서");
+  assert.equal(typeof session.data.balance, "number");
+  assert.equal(session.data.status, "ACTIVE");
+  assert.equal(typeof session.data.trustScore, "number");
+
+  const updated = await api(baseUrl, "/api/users/user_fan_a/profile", {
+    name: "민서수정"
+  });
+  assert.equal(updated.data.name, "민서수정");
+
+  const refreshed = await api(baseUrl, "/api/users/user_fan_a/session");
+  assert.equal(refreshed.data.name, "민서수정");
+
+  const longName = await api(baseUrl, "/api/users/user_fan_a/profile", {
+    name: "1234567890123"
+  }, 422);
+  assert.equal(longName.error.code, "INVALID_PROFILE_NAME");
+});
+
 test("backend resale draw applies official fee policy and settlement fields", async (t) => {
   const { baseUrl, adminUrl } = await startServer(t);
   const { ticket } = await buyFirstTicket(baseUrl);
@@ -195,12 +243,21 @@ test("backend resale draw applies official fee policy and settlement fields", as
     price
   });
   assert.equal(pool.data.price, price);
+  assert.equal(pool.data.buyerCount, 0);
+  assert.equal(pool.data.buyers, undefined);
 
   const joined = await api(baseUrl, "/api/resale/join", {
     buyerId: "user_fan_b",
     poolId: pool.data.id
   });
   assert.equal(joined.data.status, "OPEN");
+  assert.equal(joined.data.buyerCount, 1);
+  assert.equal(joined.data.buyers, undefined);
+
+  const stateAfterJoin = await api(baseUrl, "/api/state");
+  const publicPool = stateAfterJoin.data.resalePools.find((item) => item.id === pool.data.id);
+  assert.equal(publicPool.buyerCount, 1);
+  assert.equal(publicPool.buyers, undefined);
 
   const draw = await api(baseUrl, "/api/resale/draw", {
     poolId: pool.data.id,

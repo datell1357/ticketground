@@ -114,6 +114,7 @@ function publicResalePool(pool) {
     buyerFee: pool.buyerFee || null,
     buyerTotal: pool.buyerTotal || null,
     sellerSettlement: pool.sellerSettlement || null,
+    buyerCount: pool.buyers?.length || 0,
     status: pool.status,
     createdAt: pool.createdAt,
     matchedAt: pool.matchedAt || null
@@ -141,9 +142,16 @@ function publicState(db) {
       tickets: db.tickets.length
     },
     ledger: {
-      verified: verifyLedger(db).ok
+      verified: verifyLedger(db).ok,
+      totalEntries: db.ledger.length
     }
   };
+}
+
+function publicTicketsForUser(db, userId) {
+  return db.tickets
+    .filter((ticket) => ticket.ownerId === userId)
+    .map(publicTicket);
 }
 
   return {
@@ -155,6 +163,7 @@ function publicState(db) {
     publicResalePool,
     publicState,
     publicTicket,
+    publicTicketsForUser,
     publicUser
   };
 }

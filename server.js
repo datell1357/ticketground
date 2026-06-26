@@ -11,6 +11,7 @@ import { createCatalogBackend } from "./backend/catalog.js";
 import { createDtoBackend } from "./backend/dtos.js";
 import { createCommerceBackend } from "./backend/commerce.js";
 import { createEngagementBackend } from "./backend/engagement.js";
+import { createSessionBackend } from "./backend/session.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
@@ -89,7 +90,8 @@ const {
   publicResaleDrawResult,
   publicResalePool,
   publicState,
-  publicTicket
+  publicTicket,
+  publicTicketsForUser
 } = createDtoBackend({ saleSummary, verifyLedger });
 
 const {
@@ -159,6 +161,16 @@ const {
 });
 
 const {
+  demoSession,
+  updateDemoProfile
+} = createSessionBackend({
+  appendLedger,
+  findUser,
+  httpError,
+  now
+});
+
+const {
   buyPrimary,
   directTransferAttempt,
   drawPool,
@@ -187,6 +199,7 @@ const { handleApi } = createApiRouter({
   adminSummary,
   adminVenues,
   createSupportThread,
+  demoSession,
   directTransferAttempt,
   drawPool,
   httpError,
@@ -199,12 +212,14 @@ const { handleApi } = createApiRouter({
   publicResalePool,
   publicState,
   publicTicket,
+  publicTicketsForUser,
   buyPrimary,
   seatMap,
   supportThreadForUser,
   trustDevice,
   updateEventSale,
   updateEventVenue,
+  updateDemoProfile,
   updateSupportStatus,
   updateTicketStatus,
   updateUserStatus,

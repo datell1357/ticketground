@@ -20,8 +20,14 @@ const appState = {
   supportOpen: false,
   activeSupportThreadId: "",
   supportPollTimer: null,
-  qrRefreshTimer: null
+  qrRefreshTimer: null,
+  myTickets: [],
+  loggedInUserId: "",
+  sessionUser: null
 };
+
+const DEMO_USER_STORAGE_KEY = "ticketground.demoUserId";
+const DEMO_LOGGED_OUT_KEY = "ticketground.demoLoggedOut";
 
 const paymentMethods = [
   { id: "BALANCE", label: "충전금", actionLabel: "충전금으로", note: "보유 충전금 즉시 차감" },
@@ -204,11 +210,25 @@ async function api(path, body) {
 }
 
 function currentUser() {
-  return appState.data.users.find((user) => user.id === $("#userSelect").value) || appState.data.users[0];
+  if (isLoggedIn()) return appState.sessionUser;
+  const selectedId = $("#loginUserSelect")?.value || $("#userSelect")?.value || appState.data.users[0]?.id;
+  return appState.data.users.find((user) => user.id === selectedId) || appState.data.users[0] || { id: "", name: "로그인" };
 }
 
 function displayName() {
+  if (!isLoggedIn()) return "로그인";
   return appState.nicknameOverride || currentUser().name;
+}
+
+function isLoggedIn() {
+  return Boolean(appState.loggedInUserId && appState.sessionUser);
+}
+
+function requireLogin(message = "로그인이 필요합니다.") {
+  if (isLoggedIn()) return true;
+  toast(message);
+  toggleProfile(true);
+  return false;
 }
 
 function eventById(eventId) {
@@ -362,31 +382,128 @@ function startHeroTimer() {
 }
 
 function renderUsers() {
-  const select = $("#userSelect");
-  const previous = select.value;
-  optionList(select, appState.data.users.filter((user) => user.status !== "BANNED"), (user) =>
-    `${user.name} · ${fmt.format(user.balance)}원`
-  );
-  if (previous && [...select.options].some((option) => option.value === previous)) {
-    select.value = previous;
+  const rows = appState.data.users;
+  const hiddenSelect = $("#userSelect");
+  const loginSelect = $("#loginUserSelect");
+  const label = (user) => user.name;
+  if (hiddenSelect) optionList(hiddenSelect, rows, label);
+  if (loginSelect) optionList(loginSelect, rows, label);
+  const selectedId = appState.loggedInUserId || rows[0]?.id || "";
+  for (const select of [hiddenSelect, loginSelect].filter(Boolean)) {
+    if ([...select.options].some((option) => option.value === selectedId)) {
+      select.value = selectedId;
+    }
   }
 }
 
 function renderAccount() {
   const user = currentUser();
   const name = displayName();
+  const balance = isLoggedIn() ? fmt.format(user.balance || 0) : "-";
+  const status = isLoggedIn() ? user.status : "LOGGED_OUT";
+  const trustScore = isLoggedIn() ? `${user.trustScore}점` : "-";
+  document.body.classList.toggle("is-logged-out", !isLoggedIn());
   $("#profileNickname").textContent = name;
-  $("#dropdownName").textContent = `${name}님`;
-  $("#dropdownBalance").textContent = `충전금 ${fmt.format(user.balance)}원`;
-  $("#headerLoginStatus").textContent = `${name}님 로그인`;
-  $("#headerBalance").textContent = `충전금 ${fmt.format(user.balance)}원`;
+  $("#dropdownName").textContent = isLoggedIn() ? `${name}님` : "데모 로그인";
+  $("#dropdownBalance").textContent = isLoggedIn() ? `충전금 ${balance}원` : "사용자를 선택해 로그인해주세요.";
+  $("#headerLoginStatus").textContent = isLoggedIn() ? `${name}님 로그인` : "로그아웃 상태";
+  $("#headerBalance").textContent = isLoggedIn() ? `충전금 ${balance}원` : "로그인 필요";
   $("#loginName").textContent = name;
-  $("#loginStatus").textContent = user.status;
-  $("#loginTrust").textContent = `${user.trustScore}점`;
+  $("#loginStatus").textContent = status;
+  $("#loginTrust").textContent = trustScore;
   $("#nicknameInput").value = name;
+  $("#nicknameInput").disabled = !isLoggedIn();
+  $("#profileEditForm button").disabled = !isLoggedIn();
+  $("#logoutBtn").disabled = !isLoggedIn();
+  $("#loginBtn").disabled = isLoggedIn();
+  $("#loginUserSelect").disabled = isLoggedIn();
   $("#ledgerStatus").textContent = appState.data.ledger.verified
     ? `거래 원장 정상 · ${appState.data.ledger.totalEntries}건`
     : "거래 원장 확인 필요";
+}
+
+function syncLoginSelects(userId) {
+  for (const select of [$("#userSelect"), $("#loginUserSelect")].filter(Boolean)) {
+    if ([...select.options].some((option) => option.value === userId)) {
+      select.value = userId;
+    }
+  }
+}
+
+async function loadSessionUser(userId) {
+  const session = await api(`/api/users/${encodeURIComponent(userId)}/session`);
+  appState.loggedInUserId = session.id;
+  appState.sessionUser = session;
+  appState.nicknameOverride = "";
+  localStorage.setItem(DEMO_USER_STORAGE_KEY, session.id);
+  localStorage.removeItem(DEMO_LOGGED_OUT_KEY);
+  syncLoginSelects(session.id);
+  return session;
+}
+
+async function restoreDemoSession() {
+  if (localStorage.getItem(DEMO_LOGGED_OUT_KEY) === "1") {
+    appState.loggedInUserId = "";
+    appState.sessionUser = null;
+    return;
+  }
+  const storedUserId = localStorage.getItem(DEMO_USER_STORAGE_KEY);
+  const fallbackUserId = appState.data.users[0]?.id || "";
+  const userId = storedUserId || fallbackUserId;
+  if (!userId) return;
+  await loadSessionUser(userId);
+}
+
+async function loginDemoUser() {
+  const userId = $("#loginUserSelect").value;
+  if (!userId) {
+    toast("로그인할 데모 계정을 선택해주세요.");
+    return;
+  }
+  await loadSessionUser(userId);
+  await reloadMyTickets();
+  renderAccount();
+  renderSellForm();
+  renderMyTickets();
+  renderSupport();
+  toggleProfile(false);
+  toast("데모 계정으로 로그인했습니다.");
+}
+
+function logoutDemoUser() {
+  appState.loggedInUserId = "";
+  appState.sessionUser = null;
+  appState.myTickets = [];
+  appState.qr = null;
+  appState.activeSupportThreadId = "";
+  window.clearInterval(appState.qrRefreshTimer);
+  localStorage.removeItem(DEMO_USER_STORAGE_KEY);
+  localStorage.setItem(DEMO_LOGGED_OUT_KEY, "1");
+  $("#qrBox").textContent = "티켓의 QR 버튼을 눌러주세요.";
+  renderAccount();
+  renderSellForm();
+  renderMyTickets();
+  renderSupport();
+  toggleProfile(false);
+  toast("로그아웃되었습니다.");
+}
+
+async function updateProfile() {
+  if (!requireLogin("회원정보 수정은 로그인 후 가능합니다.")) return;
+  const value = $("#nicknameInput").value.trim();
+  if (!value) {
+    toast("닉네임을 입력해주세요.");
+    return;
+  }
+  const userId = appState.loggedInUserId;
+  appState.sessionUser = await api(`/api/users/${encodeURIComponent(userId)}/profile`, {
+    name: value
+  });
+  appState.nicknameOverride = "";
+  renderUsers();
+  renderAccount();
+  renderSupport();
+  toast("회원정보가 수정되었습니다.");
 }
 
 function setRoute(route, updateHash = true) {
@@ -549,7 +666,6 @@ function renderDateSelection() {
   const sale = eventSale(event);
   const dates = event.dates || [];
   const selectedDate = currentDate();
-  const selectorHref = selectedDate ? seatSelectorUrl() : "#";
   return `
     <div class="date-step-panel">
       <div class="booking-step-copy">
@@ -572,89 +688,36 @@ function renderDateSelection() {
         `).join("")}
       </div>
       <div class="booking-step-actions">
-        <a
-          class="seat-selector-link ${sale.bookable ? "" : "disabled"}"
-          href="${escapeAttr(selectorHref)}"
-          target="_blank"
-          rel="noreferrer"
-          ${sale.bookable ? `data-open-seat-selector="true"` : ""}
-        >${sale.bookable ? "좌석 선택" : sale.label}</a>
+        <button
+          class="seat-selector-link"
+          type="button"
+          data-booking-step="seat"
+          ${sale.bookable && selectedDate ? "" : "disabled"}
+        >${sale.bookable ? "예매하기" : sale.label}</button>
       </div>
     </div>
   `;
 }
 
-function seatSelectorPath(event) {
-  if (event.venueId === "venue_bluesquare" || event.venue?.includes("블루스퀘어")) {
-    return "/좌석 도면/블루스퀘어/좌석선택.dc.html";
-  }
-  return "/좌석 도면/잠실 올림픽 경기장/좌석선택.dc.html";
+function fallbackSeats(tickets) {
+  const zoneOffsets = new Map(currentEvent().zones.map((zone, index) => [zone.id, index]));
+  const zoneCounts = new Map();
+  return tickets.map((ticket, index) => {
+    const zoneIndex = zoneOffsets.get(ticket.zoneId) || 0;
+    const count = zoneCounts.get(ticket.zoneId) || 0;
+    zoneCounts.set(ticket.zoneId, count + 1);
+    const col = count % 8;
+    const row = Math.floor(count / 8);
+    return {
+      zoneId: ticket.zoneId,
+      seatLabel: ticket.seatLabel,
+      number: index + 1,
+      x: 14 + col * 10,
+      y: 22 + zoneIndex * 22 + row * 6,
+      section: zoneById(ticket.zoneId)?.name || "좌석"
+    };
+  });
 }
-
-function seatSelectorUrl() {
-  const event = currentEvent();
-  const date = currentDate();
-  const url = new URL(seatSelectorPath(event), window.location.origin);
-  url.searchParams.set("eventTitle", event.title);
-  url.searchParams.set("eventSub", event.badge || categoryLabels[event.category] || "Ticketground");
-  url.searchParams.set("eventVenue", event.venue);
-  url.searchParams.set("eventDate", formatDateTime(date.startsAt));
-  url.searchParams.set("maxTickets", "4");
-  return url.toString();
-}
-
-window.seatSelectorUrl = seatSelectorUrl;
-
-function popupFeatures(width = 1100, height = 760) {
-  const screenLeft = window.screenLeft ?? window.screenX ?? 0;
-  const screenTop = window.screenTop ?? window.screenY ?? 0;
-  const viewportWidth = window.outerWidth || document.documentElement.clientWidth || screen.width;
-  const viewportHeight = window.outerHeight || document.documentElement.clientHeight || screen.height;
-  const left = Math.max(0, Math.round(screenLeft + (viewportWidth - width) / 2));
-  const top = Math.max(0, Math.round(screenTop + (viewportHeight - height) / 2));
-  return [
-    "popup=yes",
-    `width=${width}`,
-    `height=${height}`,
-    `left=${left}`,
-    `top=${top}`,
-    "menubar=no",
-    "toolbar=no",
-    "location=no",
-    "status=no",
-    "resizable=yes",
-    "scrollbars=yes"
-  ].join(",");
-}
-
-function openSeatSelectorPopup(url) {
-  const popup = window.open(
-    url,
-    "ticketground-seat-selector",
-    popupFeatures()
-  );
-  if (!popup) return null;
-  popup.focus();
-  return popup;
-}
-
-function shouldUseFullPageSeatSelector() {
-  return window.matchMedia?.("(max-width: 760px)")?.matches || window.innerWidth < 760;
-}
-
-function openSeatSelector() {
-  if (!currentDate()) {
-    toast("예매 날짜를 먼저 선택해주세요.");
-    return;
-  }
-  const popup = openSeatSelectorPopup(seatSelectorUrl());
-  if (!popup) {
-    toast("팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 예매하기를 눌러주세요.");
-    return;
-  }
-}
-
-window.openSeatSelector = openSeatSelector;
 
 function renderSeatMap(tickets) {
   const event = currentEvent();
@@ -675,7 +738,8 @@ function renderSeatMap(tickets) {
     `;
   }).join("");
 
-  const mapSeats = venueMap.seats.map((seat) => {
+  const layoutSeats = venueMap.seats?.length ? venueMap.seats : fallbackSeats(tickets);
+  const mapSeats = layoutSeats.map((seat) => {
     const ticket = ticketsBySeat.get(`${seat.zoneId}:${seat.seatLabel}`);
     const available = ticket?.status === "ON_SALE";
     const selected = ticket?.id === appState.selectedSeatId;
@@ -904,7 +968,7 @@ function renderPoolCard(pool) {
       <div class="resale-top">
         <div>
           <strong>${event.title} · ${zone.name} 공식 재판매</strong>
-          <p>${formatDateTime(date.startsAt)} · ${fmt.format(pool.price)}원 · 대기자 ${pool.buyers.length}명</p>
+          <p>${formatDateTime(date.startsAt)} · ${fmt.format(pool.price)}원 · 대기자 ${pool.buyerCount || 0}명</p>
         </div>
         <span class="seat-status">OPEN</span>
       </div>
@@ -947,22 +1011,56 @@ function admissionQrCopy(ticket) {
   return `${formatDateCompact(qrAvailableAt(date).toISOString())}부터 입장 QR`;
 }
 
+function sellableTickets() {
+  if (!isLoggedIn()) return [];
+  return appState.myTickets.filter((ticket) =>
+    ticket.status === "OWNED" && ticket.transferCount < ticket.maxTransferCount
+  );
+}
+
+function selectedSellTicket() {
+  const selectedId = $("#sellTicketSelect").value;
+  return sellableTickets().find((ticket) => ticket.id === selectedId) || null;
+}
+
+function renderSellPricePolicy(ticket) {
+  const policy = $("#sellPricePolicy");
+  const input = $("#sellPriceInput");
+  input.min = ticket ? String(ticket.minPrice) : "0";
+  input.max = ticket ? String(ticket.maxPrice) : "";
+  input.step = "1000";
+  input.value = ticket ? String(ticket.faceValue) : "";
+  input.disabled = !ticket;
+
+  if (!ticket) {
+    policy.innerHTML = `<p>재판매 등록 가능한 보유 티켓이 없습니다.</p>`;
+    return;
+  }
+
+  policy.innerHTML = `
+    <dl>
+      <div><dt>티켓 원가</dt><dd>${fmt.format(ticket.faceValue)}원</dd></div>
+      <div><dt>판매 가능 범위</dt><dd>${fmt.format(ticket.minPrice)}원부터 ${fmt.format(ticket.maxPrice)}원까지</dd></div>
+    </dl>
+    <p>판매 가격은 위 범위 안에서 직접 입력할 수 있습니다.</p>
+  `;
+}
+
 function renderSellForm() {
-  const user = currentUser();
-  const sellable = appState.data.tickets.filter((ticket) =>
-    ticket.ownerId === user.id && ticket.status === "OWNED" && ticket.transferCount < ticket.maxTransferCount
-  );
+  const sellable = sellableTickets();
   optionList($("#sellTicketSelect"), sellable, (ticket) =>
-    `${ticketLabel(ticket)} · 최대 ${fmt.format(ticket.maxPrice)}원`
+    `${ticketLabel(ticket)} · 원가 ${fmt.format(ticket.faceValue)}원 · 최대 ${fmt.format(ticket.maxPrice)}원`
   );
-  const first = sellable[0];
-  $("#sellPriceInput").value = first ? first.maxPrice : "";
+  renderSellPricePolicy(sellable[0] || null);
   $("#sellBtn").disabled = !sellable.length;
 }
 
 function renderMyTickets() {
-  const user = currentUser();
-  const owned = appState.data.tickets.filter((ticket) => ticket.ownerId === user.id);
+  if (!isLoggedIn()) {
+    $("#myTicketList").innerHTML = `<p>로그인 후 예매 내역을 확인할 수 있습니다.</p>`;
+    return;
+  }
+  const owned = appState.myTickets;
   $("#myTicketList").innerHTML = owned.length ? owned.map((ticket) => {
     const event = eventById(ticket.eventId);
     const date = eventDateById(event, ticket.performanceDateId);
@@ -994,6 +1092,7 @@ function supportStatusLabel(status) {
 }
 
 function supportThreadsForUser() {
+  if (!isLoggedIn()) return [];
   const user = currentUser();
   return (appState.data.supportThreads || [])
     .filter((thread) => thread.userId === user.id)
@@ -1053,11 +1152,25 @@ function renderSupport() {
 }
 
 async function reloadSupportThreads() {
+  if (!isLoggedIn()) {
+    appState.data.supportThreads = [];
+    renderSupport();
+    return;
+  }
   const user = currentUser();
   const threads = await api(`/api/support/threads?userId=${encodeURIComponent(user.id)}`);
   const otherThreads = (appState.data.supportThreads || []).filter((thread) => thread.userId !== user.id);
   appState.data.supportThreads = [...threads, ...otherThreads];
   renderSupport();
+}
+
+async function reloadMyTickets() {
+  if (!isLoggedIn()) {
+    appState.myTickets = [];
+    return;
+  }
+  const user = currentUser();
+  appState.myTickets = await api(`/api/users/${encodeURIComponent(user.id)}/tickets`);
 }
 
 function openSupportChat(threadId = "") {
@@ -1075,6 +1188,7 @@ function closeSupportChat() {
 }
 
 async function submitSupportMessage() {
+  if (!requireLogin("문의는 로그인 후 남길 수 있습니다.")) return;
   const thread = currentSupportThread();
   const message = $("#supportMessageInput").value.trim();
   const subject = $("#supportSubjectInput").value.trim() || "1:1 실시간 문의";
@@ -1109,6 +1223,8 @@ async function refresh() {
   ensureBookingSelection();
   await loadSeatMap();
   renderUsers();
+  await restoreDemoSession();
+  await reloadMyTickets();
   renderAccount();
   renderHero();
   startHeroTimer();
@@ -1127,6 +1243,7 @@ async function refresh() {
 }
 
 async function buyTicket(ticketId) {
+  if (!requireLogin("예매는 로그인 후 가능합니다.")) return;
   const result = await api("/api/tickets/buy", {
     userId: currentUser().id,
     ticketId,
@@ -1143,10 +1260,19 @@ async function buyTicket(ticketId) {
 }
 
 async function listForResale() {
+  if (!requireLogin("재판매 등록은 로그인 후 가능합니다.")) return;
   const ticketId = $("#sellTicketSelect").value;
-  const price = Number($("#sellPriceInput").value);
-  if (!ticketId || !price) {
+  const priceInput = $("#sellPriceInput");
+  const priceText = priceInput.value.trim();
+  const price = Number(priceText);
+  const ticket = selectedSellTicket();
+  if (!ticketId || !priceText || !Number.isFinite(price)) {
     toast("판매할 티켓과 가격을 입력해주세요.");
+    return;
+  }
+  if (!ticket || price < ticket.minPrice || price > ticket.maxPrice) {
+    toast(`판매 가격은 ${fmt.format(ticket?.minPrice || 0)}원부터 ${fmt.format(ticket?.maxPrice || 0)}원까지 입력할 수 있습니다.`);
+    priceInput.focus();
     return;
   }
   await api("/api/resale/list", { sellerId: currentUser().id, ticketId, price });
@@ -1155,21 +1281,23 @@ async function listForResale() {
 }
 
 async function joinPool(poolId) {
+  if (!requireLogin("공식 재판매 대기 신청은 로그인 후 가능합니다.")) return;
   await api("/api/resale/join", { buyerId: currentUser().id, poolId });
   toast("공식 재판매 대기 신청이 완료되었습니다.");
   await refresh();
 }
 
 async function drawPool(poolId) {
+  if (!requireLogin("재판매 매칭은 로그인 후 가능합니다.")) return;
   await api("/api/resale/draw", { poolId });
   toast("랜덤 매칭이 진행되었습니다.");
   await refresh();
 }
 
 async function issueQr(ticketId) {
+  if (!requireLogin("입장 QR은 로그인 후 발급할 수 있습니다.")) return;
   window.clearInterval(appState.qrRefreshTimer);
-  const ticket = appState.data.tickets.find((item) => item.id === ticketId);
-  appState.qr = await api("/api/tickets/qr", { userId: ticket.ownerId, ticketId });
+  appState.qr = await api("/api/tickets/qr", { userId: currentUser().id, ticketId });
   renderQrBox(appState.qr);
   appState.qrRefreshTimer = window.setInterval(() => issueQr(ticketId).catch((error) => toast(error.message)), 20_000);
   toast("20초마다 갱신되는 입장 QR을 발급했습니다.");
@@ -1177,9 +1305,9 @@ async function issueQr(ticketId) {
 }
 
 async function issueVirtualQr(ticketId) {
+  if (!requireLogin("가상 티켓은 로그인 후 확인할 수 있습니다.")) return;
   window.clearInterval(appState.qrRefreshTimer);
-  const ticket = appState.data.tickets.find((item) => item.id === ticketId);
-  appState.qr = await api("/api/tickets/virtual-qr", { userId: ticket.ownerId, ticketId });
+  appState.qr = await api("/api/tickets/virtual-qr", { userId: currentUser().id, ticketId });
   renderQrBox(appState.qr);
   toast("예매 확인용 가상 티켓을 표시했습니다. 실제 입장에는 사용할 수 없습니다.");
 }
@@ -1258,6 +1386,9 @@ document.addEventListener("click", async (event) => {
         await selectEventForBooking(eventId);
       }
       setRoute(routeLink.dataset.route);
+      if (routeLink.dataset.openProfileEdit) {
+        window.setTimeout(() => $("#nicknameInput").focus(), 0);
+      }
       return;
     }
 
@@ -1275,26 +1406,6 @@ document.addEventListener("click", async (event) => {
     if (paymentButton) {
       appState.paymentMethod = paymentButton.dataset.paymentMethod;
       renderTickets();
-      return;
-    }
-
-    if (target.closest("[data-open-seat-selector]")) {
-      if (!currentDate()) {
-        event.preventDefault();
-        toast("예매 날짜를 먼저 선택해주세요.");
-        return;
-      }
-      if (shouldUseFullPageSeatSelector()) {
-        event.preventDefault();
-        window.location.href = seatSelectorUrl();
-        return;
-      }
-      const popup = openSeatSelectorPopup(seatSelectorUrl());
-      if (popup) {
-        event.preventDefault();
-      } else {
-        toast("팝업이 차단되어 새 탭으로 열립니다.");
-      }
       return;
     }
 
@@ -1333,6 +1444,9 @@ document.addEventListener("click", async (event) => {
 
     if (stepButton) {
       const requested = stepButton.dataset.bookingStep;
+      if ((requested === "seat" || requested === "payment") && !requireLogin("예매는 로그인 후 가능합니다.")) {
+        return;
+      }
       if (requested === "payment" && !currentSelectedTicket()) {
         toast("결제 전에 좌석을 선택해주세요.");
         return;
@@ -1406,23 +1520,24 @@ document.addEventListener("click", async (event) => {
 });
 
 $("#userSelect").addEventListener("change", () => {
-  appState.nicknameOverride = "";
-  appState.activeSupportThreadId = "";
-  appState.qr = null;
-  window.clearInterval(appState.qrRefreshTimer);
-  $("#qrBox").textContent = "티켓의 QR 버튼을 눌러주세요.";
-  renderAccount();
-  renderSellForm();
-  renderMyTickets();
-  renderSupport();
+  const userId = $("#userSelect").value;
+  loadSessionUser(userId)
+    .then(() => reloadMyTickets())
+    .then(() => {
+      renderAccount();
+      renderSellForm();
+      renderMyTickets();
+      renderSupport();
+    })
+    .catch((error) => toast(error.message));
 });
 
 $("#sellTicketSelect").addEventListener("change", () => {
-  const ticket = appState.data.tickets.find((item) => item.id === $("#sellTicketSelect").value);
-  $("#sellPriceInput").value = ticket ? ticket.maxPrice : "";
+  renderSellPricePolicy(selectedSellTicket());
 });
 
 $("#sellBtn").addEventListener("click", () => listForResale().catch((error) => toast(error.message)));
+$("#loginBtn").addEventListener("click", () => loginDemoUser().catch((error) => toast(error.message)));
 $("#verifyQrBtn").addEventListener("click", () => verifyQr().catch((error) => toast(error.message)));
 $("#searchBtn").addEventListener("click", () => {
   appState.query = $("#searchInput").value;
@@ -1467,19 +1582,11 @@ document.addEventListener("keydown", async (event) => {
 
 $("#profileEditForm").addEventListener("submit", (event) => {
   event.preventDefault();
-  const value = $("#nicknameInput").value.trim();
-  if (!value) {
-    toast("닉네임을 입력해주세요.");
-    return;
-  }
-  appState.nicknameOverride = value;
-  renderAccount();
-  toast("회원정보가 수정되었습니다.");
+  updateProfile().catch((error) => toast(error.message));
 });
 
 $("#logoutBtn").addEventListener("click", () => {
-  toggleProfile(false);
-  toast("데모 화면에서는 로그아웃 대신 로그인 상태를 유지합니다.");
+  logoutDemoUser();
 });
 
 window.addEventListener("hashchange", () => {
